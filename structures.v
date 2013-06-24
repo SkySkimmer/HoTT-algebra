@@ -1,59 +1,43 @@
 
 Require Import HoTT.
-
-Require Import FunextAxiom UnivalenceAxiom.
-
 Require Import hit.minus1Trunc.
 
 Open Scope path_scope.
 Open Scope equiv_scope.
 
-Module GroupLike.
+Module Magma.
 
 Definition law (A : Type) := A -> A -> A.
 
-Instance law_set : forall A, IsHSet A -> IsHSet (law A).
-Proof.
-intros.
-apply @trunc_arrow. exact _.
-apply trunc_arrow.
-Defined.
+Record class (G : Type) := BuildClass {
+classV :> law G
+}.
+
+Arguments BuildClass {_} _.
+Arguments classV {_} _ _ _.
 
 Record magma := BuildMagma {
 gcarr :> Type;
-gop : law gcarr;
-magma_is_set :> IsHSet gcarr
+gclass : class gcarr
 }.
 
-Definition magma_sigma : sigT (fun carr =>
-   sigT (fun _ : law carr => IsHSet carr)) <~> magma.
-Proof.
-issig BuildMagma gcarr gop magma_is_set.
-Defined.
+Definition gop : forall {G : magma}, law G := fun G => match G with
+ | BuildMagma _ (BuildClass l) => l end.
 
-Arguments gop {m} x y.
+Arguments gop {G} _ _ : simpl never.
+
+Class IsMereMagma (G : magma) := BuildIsMereMagma {
+meremagma_is_set :> IsHSet G
+}.
+
+Definition easyMagma (G : Type) (l : law G) : magma := 
+BuildMagma G (BuildClass l).
 
 Class Associative (G : magma) : Type := associative : 
 forall x y z : G, gop x (gop y z) = gop (gop x y) z.
 
-Instance assoc_prop : forall {G : magma}, IsHProp (Associative G).
-Proof.
-intros.
-apply hprop_forall. intro;apply hprop_forall. intro;apply hprop_forall.
-intro.
-apply hprop_allpath. apply magma_is_set.
-Defined.
-
 Class Commutative (G : magma) : Type := commutative : 
 forall x y : G, gop x y = gop y x.
-
-Instance comm_prop : forall {G}, IsHProp (Commutative G).
-Proof.
-intros.
-apply hprop_forall. intro;apply hprop_forall.
-intro.
-apply hprop_allpath. apply magma_is_set.
-Defined.
 
 Class IsSemigroup (G : magma) := BuildIsSemigroup {
 sg_assoc :> Associative G;
@@ -65,19 +49,10 @@ sg_mag :> magma;
 sg_is_sg :> IsSemigroup sg_mag
 }.
 
-Definition is_sg_sg {G : magma} {Hsg : IsSemigroup G} : semigroup
+Canonical Structure is_sg_sg {G : magma} {Hsg : IsSemigroup G} : semigroup
  := BuildSemigroup G Hsg.
 
-Canonical Structure is_sg_sg.
 Existing Instance sg_is_sg.
-
-Instance issg_prop : forall {G}, IsHProp (IsSemigroup G).
-Proof.
-intro.
-apply (@trunc_equiv' (sigT (fun _ : Associative G => Commutative G))).
-issig (BuildIsSemigroup G) (@sg_assoc G) (@sg_comm G).
-apply @trunc_sigma. apply _. intro. apply _.
-Defined.
 
 Class Left_id {G : magma} (e : G) := is_left_id : 
 forall x : G, gop e x = x.
@@ -89,67 +64,15 @@ id_left :> Left_id e;
 id_right :> Right_id e
 }.
 
-Lemma id_unique : forall G : magma, forall e : G, 
-IsId e -> forall e': G, IsId e' -> e = e'.
-Proof.
-intros.
-apply (@concat _ _ (gop e e')).
- apply inverse;apply id_right.
- apply id_left.
-Defined.
-
-Instance id_prop : forall G e, IsHProp (@IsId G e).
-Proof.
-intros.
-apply (@trunc_equiv' (sigT (fun _ : Left_id e => Right_id e))).
-issig (BuildIsId G e) (@id_left G e) (@id_right G e).
-
-apply @trunc_sigma.
-apply @hprop_forall. exact _. intros.
-apply hprop_allpath.
-apply (magma_is_set G).
-intro H;clear H.
-apply @hprop_forall. exact _. intros.
-apply hprop_allpath.
-apply (magma_is_set G).
-Defined.
-
-Lemma left_id_id : forall {G : semigroup} {e : G}, Left_id e -> IsId e.
-Proof.
-intros. split;auto.
-intro.
-eapply concat. apply sg_comm. apply X.
-Defined.
-
-(*
-Proof of concept: we can go between IsSemigroup and semigroup easily
-*)
-Lemma left_id_id' : forall G, IsSemigroup G ->
- forall e : G, Left_id e -> IsId e.
-Proof.
-intros G Hsg. apply (@left_id_id _).
-Defined.
-
-Lemma left_id_id'' : forall {G : semigroup} (e : G), Left_id e -> IsId e.
-Proof.
-intros G. apply left_id_id'. apply _.
-Defined.
-
-Instance idT_prop : forall G, IsHProp (sigT (@IsId G)).
-Proof.
-intro G.
-apply hprop_inhabited_contr. intro X.
-apply BuildContr with X.
-intro Y.
-destruct X as [e He];destruct Y as [e' He'].
-apply path_sigma with (id_unique _ _ He _ He').
-apply id_prop.
-Defined.
+Record Identity (G : magma) := BuildIdentity {
+identity_val :> G;
+identity_pr : IsId identity_val
+}.
+Existing Instance identity_pr.
 
 Class IsMonoid (G : magma) := BuildIsMonoid {
 monoid_is_sg :> IsSemigroup G;
-gid : G;
-monoid_id :> IsId gid
+monoid_id : Identity G
 }.
 
 Record monoid := BuildMonoid {
@@ -157,30 +80,18 @@ monoid_mag :> magma;
 monoid_is_monoid :> IsMonoid monoid_mag
 }.
 
-Arguments gid {_ _}.
+Definition gid {G : monoid} : Identity G := @monoid_id G G.
+Definition gidV {G : monoid} : G := gid.
 
-Definition is_mono_mono {G : magma} {Hmono : IsMonoid G} : monoid
+Instance gid_id : forall G, IsId (@gid G) := fun G => _.
+
+Canonical Structure is_mono_mono {G : magma} {Hmono : IsMonoid G} : monoid
  := BuildMonoid G Hmono.
 
-Canonical Structure is_mono_mono.
 Existing Instance monoid_is_monoid.
 
-Instance ismonoid_prop : forall {G}, IsHProp (IsMonoid G).
-Proof.
-intro.
-apply (@trunc_equiv' (sigT (fun _ : IsSemigroup G => 
-                    sigT (@IsId G)))).
-issig (BuildIsMonoid G) (@monoid_is_sg G) (@gid G) (@monoid_id G).
-apply @trunc_sigma. apply _.
-intro. apply _.
-Defined.
-
-Canonical Structure monoid_sg : forall {G : monoid}, semigroup.
-Proof.
-intro.
-apply BuildSemigroup with G.
-apply _.
-Defined.
+Canonical Structure monoid_sg (G : monoid) : semigroup := 
+BuildSemigroup G _.
 
 Coercion monoid_sg : monoid >-> semigroup.
 
@@ -193,26 +104,6 @@ Left_cancel :> Lcancel a;
 Right_cancel :> Rcancel a
 }.
 
-Lemma left_cancel_cancel : forall {G}, Commutative G ->
-forall a : G, Lcancel a -> Cancel a.
-Proof.
-intros ? Hcomm ? X. split;auto.
-red;intros ? ? X0.
-red in X. apply X.
-eapply concat. apply Hcomm. eapply concat. apply X0. apply Hcomm.
-Defined.
-
-Instance cancelling_prop : forall G a, IsHProp (@Cancel G a).
-Proof.
-intros.
-apply (@trunc_equiv' (sigT (fun _ : Lcancel a => Rcancel a))).
-issig (BuildCancel _ a) (@Left_cancel _ a) (@Right_cancel _ a).
-apply @trunc_sigma;[|intro C;clear C];
-repeat (apply @hprop_forall;[ exact _ | intros]);
-apply hprop_allpath;
-apply magma_is_set.
-Defined.
-
 Class IsCMonoid (G : magma) := BuildIsCMonoid {
 cmonoid_is_monoid :> IsMonoid G;
 cmonoid_cancel :> forall a : G, Cancel a
@@ -223,235 +114,104 @@ cmono_mag :> magma;
 cmono_is_cmono :> IsCMonoid cmono_mag
 }.
 
-Definition is_cmono_cmono {G : magma} {Hmono : IsCMonoid G} : Cmonoid
+Canonical Structure is_cmono_cmono {G : magma} {Hmono : IsCMonoid G} : Cmonoid
  := BuildCMonoid G Hmono.
 
-Canonical Structure is_cmono_cmono.
 Existing Instance cmono_is_cmono.
 
-Instance iscmono_prop : forall {G}, IsHProp (IsCMonoid G).
-Proof.
-intro.
-apply (@trunc_equiv' (sigT (fun _ : IsMonoid G => forall a : G, Cancel a))).
-issig (BuildIsCMonoid G) (@cmonoid_is_monoid G) (@cmonoid_cancel G).
-apply @trunc_sigma.
-apply _.
-intro; apply _.
-Defined.
-
-Canonical Structure cmono_monoid : forall {G : Cmonoid}, monoid.
-Proof.
-intro. apply BuildMonoid with G. apply _.
-Defined.
+Canonical Structure cmono_monoid (G : Cmonoid) : monoid :=
+BuildMonoid G _.
 
 Coercion cmono_monoid : Cmonoid >-> monoid.
 
-Class Linverse {G : monoid} (x y : G) : Type := left_inverse : 
-gop x y = gid.
-Class Rinverse {G : monoid} (x y : G) : Type := right_inverse : 
-gop y x = gid.
+(*
+Usually we would require G to be a monoid, with the left_inverse property being gop x y = gid
+By doing things this way, we gain
+- less complicated coercion paths if G comes from say a field or something
+- more ease of use:
+  if we need gop x y = gid we use unicity of identity elements, then since IsId is a class instance resolution suffices
+  if we need gop (gop x y) z = z we directly apply the IsInverse hypothesis
+*)
+Class Linverse {G : magma} (x y : G) : Type := left_inverse : IsId (gop x y).
+Class Rinverse {G : magma} (x y : G) : Type := right_inverse : IsId (gop y x).
 
-Class IsInverse {G : monoid} (x y : G) : Type := BuildIsInverse {
+Existing Instances left_inverse right_inverse.
+
+Class IsInverse {G : magma} (x y : G) : Type := BuildIsInverse {
 inverse_left :> Linverse x y;
 inverse_right :> Rinverse x y
 }.
 
-Lemma linverse_inverse : forall {G : monoid} (x y : G), 
-Linverse x y -> IsInverse x y.
-Proof.
-intros ? ? ? X;split;auto.
-red. eapply concat. apply sg_comm.
-apply X.
-Defined.
-
-Instance inverse_prop : forall G x y, IsHProp (@IsInverse G x y).
-Proof.
-intros. 
-apply (@trunc_equiv' (sigT (fun _ : Linverse x y => Rinverse x y))).
-issig (BuildIsInverse _ x y) (@inverse_left G x y) (@inverse_right G x y).
-apply @trunc_sigma;[|intro C;clear C];
-apply hprop_allpath; apply magma_is_set.
-Defined.
-
-Lemma inverse_symm : forall G, Symmetric (@IsInverse G).
-Proof.
-red. intros ? ? ? X. split;apply X.
-Defined.
-
-Lemma inverse_symm_rw : @IsInverse  = fun G x y => @IsInverse G y x.
-Proof.
-apply funext_axiom. intro G.
-apply funext_axiom. intro x. apply funext_axiom;intro y.
-apply univalence_axiom. apply equiv_iff_hprop;apply inverse_symm.
-Defined.
+Record Inverse {G : magma} (x : G) := BuildInverse {
+inverse_val :> G;
+inverse_is_inverse :> IsInverse x inverse_val
+}.
+Existing Instance inverse_is_inverse.
 
 Class IsGroup (G : magma) := BuildIsGroup {
-group_is_monoid :> IsMonoid G;
-gopp : G -> G;
-gopp_correct : forall x : G, IsInverse x (gopp x)
+group_is_cmonoid :> IsCMonoid G;
+g_opp : forall x : G, Inverse x
 }.
-
-Existing Instance gopp_correct.
 
 Record group := BuildGroup {
 group_mag :> magma;
 group_is_group :> IsGroup group_mag
 }.
 
-Definition is_group_group {G : magma} {Hg : IsGroup G} : group
+Definition gopp {G : group} : forall x : G, Inverse x := @g_opp G G.
+
+Canonical Structure is_group_group {G : magma} {Hg : IsGroup G} : group
  := BuildGroup G Hg.
 
-Canonical Structure is_group_group.
 Existing Instance group_is_group.
 
-Arguments gopp {_ _} _.
+Definition gopp' {G : magma} {Hg : IsGroup G} : forall x : G, Inverse x := gopp.
 
-Lemma inverse_cancelling : forall {G : monoid}, forall a : G,
- sigT (IsInverse a) -> Cancel a.
-Proof.
-intros. apply left_cancel_cancel. apply sg_comm.
-destruct X as [a' H].
-red; intros.
-eapply concat;[ | eapply concat;[ apply (ap (gop a') X) | ]].
+Definition goppV {G : group} : G -> G := fun x => gopp x.
+Definition goppV' {G : magma} {Hg : IsGroup G} : G -> G := goppV.
 
-eapply concat;[ | symmetry;apply sg_assoc].
-pattern (gop a' a). eapply transport. symmetry. apply H.
-apply inverse. apply monoid_id.
-
-eapply concat;[ apply sg_assoc |].
-pattern (gop a' a). eapply transport. symmetry. apply H.
-apply monoid_id.
-Defined.
-
-Lemma group_is_cancelling : forall {G : group}, forall a : G, Cancel a.
-Proof.
-intros.
-pose (@group_is_monoid G _).
-apply inverse_cancelling. exists (gopp a). apply gopp_correct.
-Defined.
-
-Instance group_is_cmono : forall {G} {Hg : IsGroup G}, IsCMonoid G.
-Proof.
-intros;apply BuildIsCMonoid.
-apply _.
-apply group_is_cancelling.
-Defined.
-
-Canonical Structure group_cmono : forall {G : group}, Cmonoid.
-Proof.
-intro G.
-apply BuildCMonoid with G. apply BuildIsCMonoid.
-- apply _.
-- apply group_is_cancelling.
-Defined.
+Canonical Structure group_cmono (G : group) : Cmonoid :=
+BuildCMonoid G _.
 
 Coercion group_cmono : group >-> Cmonoid.
 
-Lemma inverse_unique : forall {G : monoid}, forall x y : G, IsInverse x y -> 
-forall y', IsInverse x y' -> y = y'.
-Proof.
-intros. apply inverse_cancelling with x. exists y;exact X.
-eapply concat. apply X. symmetry. apply X0.
-Defined.
+Instance gopp_correct : forall (G : group) x, @IsInverse G x (gopp x)
+ := fun _ _ => _.
 
-Lemma group_inverse_gopp : forall {G : group}, forall x y : G,
- @IsInverse G x y -> gopp x = y.
-Proof.
-intros. 
-apply (@inverse_unique G) with x.
- apply gopp_correct.
- apply X.
-Defined.
+Class IsMorphism {G H : magma} (f : G -> H)
+ := ismorphism : forall x y : G, f (gop x y) = gop (f x) (f y).
 
-Lemma gopp_gopp : forall {G : group} (x : G), gopp (gopp x) = x.
-Proof.
-intros. apply group_inverse_gopp.
-apply inverse_symm. apply gopp_correct.
-Defined.
-
-Instance gid_inverse : forall G : monoid, @IsInverse G gid gid.
-Proof.
-intros.
-split; apply monoid_id.
-Defined.
-
-Lemma gopp_gid : forall G : group, @paths G (gopp gid) gid.
-Proof.
-intros. apply group_inverse_gopp. apply gid_inverse.
-Defined.
-
-Lemma inverse_gop : forall G : monoid, forall x x' : G, IsInverse x x' -> 
-forall y y' : G, IsInverse y y' -> IsInverse (gop x y) (gop y' x').
-Proof.
-intros. apply linverse_inverse. red.
-transitivity (gop x (gop (gop y y') x')).
-
-eapply concat. symmetry. apply sg_assoc. apply ap.
-apply sg_assoc.
-
-pattern (gop y y'). eapply transport. symmetry. apply X0.
-pattern (gop gid x'). eapply transport. symmetry. apply monoid_id.
-apply X.
-Defined.
-
-Lemma gopp_gop : forall G : group, forall x y : G,
- gopp (gop x y) = gop (gopp y) (gopp x).
-Proof.
-intros. apply group_inverse_gopp.
-apply inverse_gop;apply gopp_correct.
-Defined.
-
-Lemma gopp_unique : forall (G : monoid) (opp : G -> G), 
-(forall x, IsInverse x (opp x)) -> forall opp' : G -> G, 
-(forall x, IsInverse x (opp' x)) -> opp = opp'.
-Proof.
-intros. apply funext_axiom. intro.
-eapply inverse_unique. apply X. apply X0.
-Defined.
-
-Instance is_gopp_prop : forall G : monoid, forall opp, 
-IsHProp (forall x : G, IsInverse x (opp x)).
-Proof.
-intros. apply @trunc_forall. apply _. intro. apply _.
-Defined.
-
-Instance goppT_prop : forall G : monoid, IsHProp (sigT (fun opp : G -> G => 
-forall x, IsInverse x (opp x))).
-Proof.
-intros.
-apply hprop_inhabited_contr. intro X.
-apply BuildContr with X.
-intro Y.
-destruct X as [e He];destruct Y as [e' He'].
-apply path_sigma with (gopp_unique _ _ He _ He').
-simpl. apply is_gopp_prop.
-Defined.
-
-Instance group_prop : forall {G}, IsHProp (IsGroup G).
-Proof.
-intro;apply (@trunc_equiv' (sigT (fun ismono : IsMonoid G => 
-                   (sigT (fun opp : G -> G => forall x, IsInverse x (opp x)))))).
-issig (BuildIsGroup G) (@group_is_monoid G) (@gopp G) (@gopp_correct G).
-
-apply @trunc_sigma. apply _.
-intro. apply _.
-Defined.
-
-End GroupLike.
+End Magma.
 
 Module Related.
 
-Record relator := BuildRelator {
-runder :> Type;
-rrel : relation runder;
-relator_set : IsHSet runder;
-relator_prop : forall {x y}, IsHProp (rrel x y)
+Record class (T : Type) := BuildClass {
+classV : relation T
 }.
 
-Existing Instance relator_set.
-Existing Instance relator_prop.
+Record relator := BuildRelator {
+runder :> Type;
+rrelC : class runder
+}.
 
-Arguments rrel {_} _ _.
+Definition rrel {r : relator} : relation r := 
+match r with | BuildRelator _ (BuildClass cmp) => cmp end.
+
+Arguments rrel {_} _ _ : simpl never.
+Arguments BuildClass {_} _.
+Arguments classV {_} _ _ _.
+
+Definition easyRelator : forall T : Type, relation T -> relator := 
+fun T r => BuildRelator T (BuildClass r).
+
+Class relatorProp (r : relator) :=
+ relatorprop : forall x y : r, IsHProp (rrel x y).
+Existing Instance relatorprop.
+
+Class IsMereRelator (r : relator) := BuildIsMereRelator {
+mererelator_is_set :> IsHSet r;
+mererelator_is_prop :> relatorProp r
+}.
 
 Class IsTransitive (R : relator) := istrans : Transitive (@rrel R).
 Class IsReflexive (R : relator) := isrefl : Reflexive (@rrel R).
@@ -463,65 +223,11 @@ equivalence_symm :> IsSymmetric R;
 equivalence_trans :> IsTransitive R
 }.
 
-Instance istrans_prop : forall {r}, IsHProp (IsTransitive r).
-Proof.
-intros.
-repeat (apply hprop_forall;intro). apply _.
-Defined.
-
-Instance isrefl_prop : forall {r}, IsHProp (IsReflexive r).
-Proof.
-intros.
-repeat (apply hprop_forall;intro). apply _.
-Defined.
-
-Instance issymm_prop : forall {r}, IsHProp (IsSymmetric r).
-Proof.
-intros.
-repeat (apply hprop_forall;intro). apply _.
-Defined.
-
-Definition IsEquivalence_sig : forall r, 
-sigT (fun _ : IsReflexive r => sigT (fun _ : IsSymmetric r => IsTransitive r))
-<~> IsEquivalence r.
-Proof.
-intro r. issig (BuildIsEquivalence r) (@equivalence_refl r) (@equivalence_symm r)
-  (@equivalence_trans r).
-Defined.
-
-Instance isequivalence_prop : forall {r}, IsHProp (IsEquivalence r).
-Proof.
-intro r.
-eapply trunc_equiv'.
-apply IsEquivalence_sig.
-apply @trunc_sigma. apply _.
-intro. apply @trunc_sigma. apply _.
-intro;apply _.
-Defined.
-
 Class IsAntisymmetric (R : relator) :=
  isantisymm : forall x y : R, rrel x y -> rrel y x -> x = y.
 
 Class IsIrreflexive (R : relator) := 
  isirrefl : forall x : R, rrel x x -> Empty.
-
-Lemma irrefl_neq : forall {R} {Hr : IsIrreflexive R}, 
-  forall x y : R, rrel x y -> x = y -> Empty.
-Proof.
-intros ? ? ? ? ?. intros H. destruct H. apply Hr with x. assumption.
-Defined.
-
-Instance isantisymm_prop : forall {r}, IsHProp (IsAntisymmetric r).
-Proof.
-intros.
-repeat (apply hprop_forall;intro). apply hprop_allpath;apply relator_set.
-Defined.
-
-Instance isirrefl_prop : forall {r}, IsHProp (IsIrreflexive r).
-Proof.
-intros.
-repeat (apply hprop_forall;intro). apply _.
-Defined.
 
 Class IsPoset (R : relator) := BuildIsPoset {
 order_trans :> IsTransitive R;
@@ -529,32 +235,9 @@ order_refl :> IsReflexive R;
 order_antisymm :> IsAntisymmetric R
 }.
 
-Definition isposet_sig : forall r, sigT (fun _ : IsTransitive r => 
-sigT (fun _ : IsReflexive r => IsAntisymmetric r)) <~> IsPoset r.
-Proof.
-intro r;
-issig (BuildIsPoset r) (@order_trans r) (@order_refl r) (@order_antisymm r).
-Defined.
-
-Instance isposet_prop : forall {r}, IsHProp (IsPoset r).
-Proof.
-intro.
-eapply trunc_equiv'.
-apply isposet_sig.
-apply @trunc_sigma. apply _.
-intro. apply @trunc_sigma. apply _.
-intro;apply _.
-Defined.
-
 Class IsCotransitive (R : relator) := 
- icotrans : forall x y : R, rrel x y -> forall z,
+ iscotrans : forall x y : R, rrel x y -> forall z,
    minus1Trunc (rrel x z \/ rrel y z).
-
-Instance iscotrans_prop : forall {r}, IsHProp (IsCotransitive r).
-Proof.
-intros.
-repeat (apply hprop_forall;intro). apply minus1Trunc_is_prop.
-Defined.
 
 Class IsApartness (R : relator) := BuildIsApartness {
 apart_irrefl :> IsIrreflexive R;
@@ -562,321 +245,410 @@ apart_symm :> IsSymmetric R;
 apart_cotrans :> IsCotransitive R
 }.
 
-Definition isapart_sig : forall r, sigT (fun _ : IsIrreflexive r =>
-sigT (fun _ : IsSymmetric r => IsCotransitive r)) <~> IsApartness r.
-Proof.
-intros.
-issig (BuildIsApartness r) (@apart_irrefl r) (@apart_symm r) (@apart_cotrans r).
-Defined.
-
-Instance isapart_prop : forall {r}, IsHProp (IsApartness r).
-Proof.
-intro;eapply trunc_equiv'.
-apply isapart_sig.
-apply @trunc_sigma. apply _.
-intro. apply @trunc_sigma. apply _.
-intro;apply _.
-Defined.
-
 Class IsLinear (R : relator) := 
  islinear : forall x y : R, minus1Trunc (rrel x y \/ rrel y x).
 
-Instance islinear_prop : forall {r}, IsHProp (IsLinear r).
-Proof.
-intro. repeat (apply hprop_forall;intro). apply minus1Trunc_is_prop.
-Defined.
+Class IsConstrLinear (R : relator) := 
+ isconstrlinear : forall x y : R, rrel x y \/ rrel y x.
 
 Class IsStrictLinear (R : relator) := 
- isstrictlinear : forall x y : R, rrel x y -> forall z, rrel x z \/ rrel z y.
-(* not HProp *)
+ isstrictlinear : forall x y : R, rrel x y -> forall z,
+   minus1Trunc (rrel x z \/ rrel z y).
 
-Definition relator_inverse : relator -> relator.
-Proof.
-intro R.
-apply BuildRelator with R (fun x y => rrel y x).
-apply _. apply _.
-Defined.
+Class IsConstrStrictLinear (R : relator) := isconstrstrictlinear
+ : forall x y : R, rrel x y -> forall z,rrel x z \/ rrel z y.
 
-Notation "R ^" := (relator_inverse R) (at level 3) : relator_scope.
+Class IsDecidable (R : relator) := 
+ isdecidable : forall x y : R, (rrel x y)+(~rrel x y).
 
-Open Scope relator_scope.
-
-Instance inverse_trans : forall {R} {Htrans : IsTransitive R}, 
-  IsTransitive (R ^).
-Proof.
-intros. repeat intro.
-eapply Htrans. apply X0. apply X.
-Defined.
-
-Instance inverse_refl : forall {R} {Hrefl : IsReflexive R}, 
-  IsReflexive (R ^).
-Proof.
-repeat intro. apply Hrefl.
-Defined.
-
-Instance inverse_symm : forall {R} {Hsymm : IsSymmetric R}, 
-  IsSymmetric (R ^).
-Proof.
-repeat intro. apply Hsymm;assumption.
-Defined.
-
-Instance inverse_irrefl : forall {R} {Hirrefl : IsIrreflexive R}, 
-  IsIrreflexive (R ^).
-Proof.
-intros. eapply Hirrefl.
-Defined.
-
-Record ordered_mag := BuildOrderedMagma {
-
+Class IsStrictPoset (R : relator) := BuildIsStrictPoset {
+strictposet_irrefl :> IsIrreflexive R;
+strictposet_trans :> IsTransitive R
 }.
+
+Record relator2 := BuildRelator2 {
+runder2 :> Type;
+rrelC2_1 : class runder2;
+rrelC2_2 : class runder2
+}.
+
+Definition relator2_1 (r : relator2) : relator
+ := BuildRelator r (rrelC2_1 r).
+Definition rrel2_1 {r : relator2} : relation r := @rrel (relator2_1 r).
+
+Definition relator2_2 (r : relator2) : relator
+ := BuildRelator r (rrelC2_2 r).
+Definition rrel2_2 {r : relator2} : relation r := @rrel (relator2_2 r).
+
+Class IsTight (r : relator2) :=
+ istight : forall x y : r, rrel2_1 x y <-> ~ rrel2_2 y x.
+
+Class IsPoset2 (r : relator2) := BuildIsPoset2 {
+poset2_1 :> IsPoset (relator2_1 r);
+poset2_2 :> IsStrictPoset (relator2_2 r);
+poset2_tight :> IsTight r
+}.
+
+Class IsUpper (r : relator) (P : r -> Type) (m : r) := 
+isupper : forall x, P x -> rrel x m.
+Class IsLower (r : relator) (P : r -> Type) (m : r) := 
+islower : forall x, P x -> rrel m x.
+
+Class IsMaximum (r : relator) P (m : r) := BuildIsMaximum {
+maximum_upper :> IsUpper r P m;
+maximum_verifies : P m
+}.
+
+Class IsMinimum (r : relator) P (m : r) := BuildIsMinimum {
+minimum_lower :> IsLower r P m;
+minimum_verifies : P m
+}.
+
+Class IsSupremum (r : relator) P (m : r) :=
+ issupremum : IsMinimum r (IsUpper r P) m.
+
+Instance supremum_upper : forall r P m {H : IsSupremum r P m}, IsUpper r P m := 
+fun _ _ _ H => @minimum_verifies _ _ _ H.
+
+Class IsInfimum (r : relator) P (m : r) :=
+ isinfimum : IsMaximum r (IsLower r P) m.
+
+Instance infimum_lower : forall r P m {H : IsInfimum r P m}, IsLower r P m := 
+fun _ _ _ H => @maximum_verifies _ _ _ H.
+
+Record Upper (r : relator) P := BuildUpper {
+upper_val :> r;
+upper_is_upper :> IsUpper r P upper_val
+}.
+Existing Instance upper_is_upper.
+Arguments upper_val {_ _} _.
+
+Record Lower (r : relator) P := BuildLower {
+lower_val :> r;
+lower_is_lower :> IsLower r P lower_val
+}.
+Existing Instance lower_is_lower.
+Arguments lower_val {_ _} _.
+
+Record Maximum (r : relator) P := BuildMaximum {
+maximum_val :> r;
+maximum_is_maximum :> IsMaximum r P maximum_val
+}.
+Existing Instance maximum_is_maximum.
+Arguments maximum_val {_ _} _.
+
+Record Minimum (r : relator) P := BuildMinimum {
+minimum_val :> r;
+minimum_is_minimum :> IsMinimum r P minimum_val
+}.
+Existing Instance minimum_is_minimum.
+Arguments minimum_val {_ _} _.
+
+Definition Supremum (r : relator) P : Type := Minimum r (IsUpper r P).
+Instance supremum_is_supremum : forall r P (m : Supremum r P),
+ IsSupremum r P m.
+Proof. intros. red. apply _. Defined.
+
+Definition Infimum (r : relator) P := Maximum r (IsLower r P).
+Instance infimum_is_infimum : forall r P (m : Infimum r P),
+ IsInfimum r P m.
+Proof. intros;red;apply _. Defined.
+
+Definition doubleton {T : Type} (a b : T) (x : T) : Type :=
+minus1Trunc (a=x \/ b=x).
+
+Definition Supremum2 (r : relator) (a b : r) := Supremum r (doubleton a b).
+Definition Infimum2  (r : relator) (a b : r) := Infimum  r (doubleton a b).
+Definition Maximum2  (r : relator) (a b : r) := Maximum  r (doubleton a b).
+Definition Minimum2  (r : relator) (a b : r) := Minimum  r (doubleton a b).
+
+Class IsLattice (r : relator) := BuildIsLattice {
+lattice_is_poset :> IsPoset r;
+lattice_has_sup2 : forall a b, Supremum2 r a b;
+lattice_has_inf2 : forall a b, Infimum2  r a b
+}.
+
+Class IsTotalOrder (r : relator) := BuildIsTotalOrder {
+totalorder_is_poset :> IsPoset r;
+totalorder_linear :> IsLinear r
+}.
+
+Class IsConstrTotalOrder (r : relator) := BuildIsConstrTotalOrder {
+constrtotalorder_is_poset :> IsPoset r;
+constrtotalorder_linear :> IsConstrLinear r
+}.
+
+Class IsMorphism {r r' : relator} (f : r -> r')
+ := ismorphism : forall x y : r, rrel x y -> rrel (f x) (f y).
+Class IsReflecting {r r' : relator} (f : r -> r')
+ := isreflecting : forall x y : r, rrel (f x) (f y) -> rrel x y.
+Class IsEmbedding {r r' : relator} (f : r -> r') := BuildIsEmbedding {
+embedding_is_morphism :> IsMorphism f;
+embedding_is_reflecting :> IsReflecting f
+}.
+
+Class IsBinMorphism {r1 r2 r' : relator} (f : r1 -> r2 -> r') := isbinmorphism
+ : forall x x' : r1, rrel x x' -> forall y y' : r2, rrel y y'
+   -> rrel (f x y) (f x' y').
+Class IsBinReflecting {r1 r2 r' : relator} (f : r1 -> r2 -> r')
+ := isbinreflecting : forall x x' y y', rrel (f x y) (f x' y')
+   -> minus1Trunc (rrel x x' \/ rrel y y').
+
+Definition pathRel (T : Type) : relator := easyRelator T paths.
 
 End Related.
 
-Module RingLike.
-Export GroupLike.
+Module OrderedMagma.
+Export Magma.
+Export Related.
 
-Record magma2 := BuildMagma2 {
-rcarr :> Type;
-radd : law rcarr;
-rmult : law rcarr;
-magma2_is_set :> IsHSet rcarr
+Record oMag := BuildOMag {
+ocarr :> Type;
+olawC : Magma.class ocarr;
+orelC : Related.class ocarr
 }.
 
-Definition magma2_sigma : sigT (fun carr => sigT (fun _ : law carr => 
-  sigT (fun _ : law carr => IsHSet carr))) <~> magma2.
-Proof.
-issig BuildMagma2 rcarr radd rmult magma2_is_set.
-Defined.
+(*
+Declaring as canonical structure allows us to do something like
+forall G : oMag, forall x y : G, gop x y = ...
+Declaring as coercion allows us to use our predicates on magmas: IsMonoid, etc
+*)
+Canonical Structure omag_mag (G : oMag) : magma := 
+BuildMagma G (olawC G).
+Coercion omag_mag : oMag >-> magma.
 
-Canonical Structure mag2_add (G : magma2) : magma.
-Proof.
-apply BuildMagma with (rcarr G).
-exact (radd G).
-apply magma2_is_set.
-Defined.
+Canonical Structure omag_rel (G : oMag) : relator := 
+BuildRelator G (orelC G).
+Coercion omag_rel : oMag >-> relator.
 
-Canonical Structure mag2_mult : magma2 -> magma.
-Proof.
-intro G. apply BuildMagma with (rcarr G).
-exact (rmult G).
-apply magma2_is_set.
-Defined.
+Class IsLInvariant (G : oMag)
+ := islcompat :> forall z : G, IsMorphism (gop z).
+Class IsRInvariant (G : oMag)
+ := isrcompat :> forall z : G, IsMorphism (fun a : G => gop a z).
+Class IsInvariant (G : oMag) := BuildIsInvariant {
+invariant_left :> IsLInvariant G;
+invariant_right :> IsRInvariant G
+}.
 
-Arguments radd {_} _ _.
-Arguments rmult {_} _ _.
+Class IsCompat (G : oMag) := iscompat :> IsBinMorphism (@gop G).
 
-Infix "+" := radd.
-Infix "°" := rmult (at level 40). (*level 40 is same as "*" *)
+Class IsLRegular (G : oMag) (a : G) :=
+ islregular :> IsReflecting (gop a).
+Class IsRRegular (G : oMag) (a : G) :=
+ isrregular :> IsReflecting (fun b : G => gop b a).
+Class IsRegular (G : oMag) (a : G) := BuildIsRegular {
+isreg_left :> IsLRegular G a;
+isreg_right :> IsRRegular G a
+}.
 
-Class Ldistributes (G : magma2) := left_distributes : 
+Class IsBinRegular (G : oMag) := isbinregular :> IsBinReflecting (@gop G).
+
+End OrderedMagma.
+
+Module Ring.
+Export Magma.
+
+(* consider using 
+radd :> magma;
+rmult : Magma.class radd
+instead? *)
+Record prering := BuildPrering {
+rcarr :> Type;
+raddC : Magma.class rcarr;
+rmultC : Magma.class rcarr
+}.
+
+Definition easyPrering : forall G : Type, law G -> law G -> prering := 
+fun G a m => BuildPrering G (BuildClass a) (BuildClass m).
+
+Canonical Structure prering_add (G : prering) : magma :=
+BuildMagma (rcarr G) (raddC G).
+
+Canonical Structure prering_mult (G : prering) : magma :=
+BuildMagma (rcarr G) (rmultC G).
+
+Definition radd {G : prering} : law G := @gop (prering_add G).
+Definition rmult {G : prering} : law G := @gop (prering_mult G).
+
+Arguments radd {_} _ _ : simpl never.
+Arguments rmult {_} _ _ : simpl never.
+
+Infix "+" := (@radd _).
+Infix "°" := (@rmult _) (at level 40). (*level 40 is same as "*" *)
+
+Class Ldistributes (G : prering) := left_distributes : 
 forall a b c : G, a ° (b+c) = (a°b) + (a°c).
-Class Rdistributes (G : magma2) := right_distributes : 
+Class Rdistributes (G : prering) := right_distributes : 
 forall a b c : G, (b+c) ° a = (b°a) + (c°a).
-Class Distributes (G : magma2) : Type := BuildDistributes {
+Class Distributes (G : prering) : Type := BuildDistributes {
 distrib_left :> Ldistributes G;
 distrib_right :> Rdistributes G
 }.
 
-Instance distrib_prop : forall {G}, IsHProp (Distributes G).
-Proof.
-intro G. apply (@trunc_equiv' (sigT (fun _ : Ldistributes G => Rdistributes G))).
-issig (BuildDistributes G) (@distrib_left G) (@distrib_right G).
-apply @trunc_sigma;[|intro C;clear C];
-repeat (apply hprop_forall;intro);
-apply hprop_allpath; apply magma2_is_set.
-Defined.
-
-Class IsSemiring (G : magma2) := BuildIsSemiring {
-semiring_add :> IsMonoid (mag2_add G);
-semiring_mult :> IsMonoid (mag2_mult G);
-semiring_cancel :> forall a : (mag2_add G), Cancel a;
+Class IsSemiring (G : prering) := BuildIsSemiring {
+semiring_add :> IsCMonoid (prering_add G);
+semiring_mult :> IsMonoid (prering_mult G);
 semiring_distributes :> Distributes G
 }.
 
 Record semiring := BuildSemiring {
-semir_mag2 :> magma2;
+semir_mag2 :> prering;
 semir_is_semir :> IsSemiring semir_mag2
 }.
 
-Definition is_semir_semir {G : magma2} {Hsr : IsSemiring G} : semiring
+Canonical Structure is_semir_semir {G : prering} {Hsr : IsSemiring G} : semiring
  := BuildSemiring G Hsr.
 
-Canonical Structure is_semir_semir.
 Existing Instance semir_is_semir.
 
-Canonical Structure semiring_add_monoid : forall {G : semiring}, monoid.
-Proof.
-intro. apply BuildMonoid with (mag2_add G).
-apply _.
-Defined.
+Canonical Structure semiring_add_cmonoid (G : semiring) : Cmonoid :=
+BuildCMonoid (prering_add G) _.
 
-Canonical Structure semiring_mult_monoid : forall {G : semiring}, monoid.
-Proof.
-intro. apply BuildMonoid with (mag2_mult G).
-apply _.
-Defined.
+Canonical Structure semiring_mult_monoid (G : semiring) : monoid :=
+BuildMonoid (prering_mult G) _.
 
+Definition Zero {G : semiring} : Identity (prering_add G) :=
+ @gid (semiring_add_cmonoid G).
+Definition ZeroV {G : semiring} : prering_add G := Zero.
 
-Instance issemir_prop : forall {G}, IsHProp (IsSemiring G).
-Proof.
-intro.
-apply (@trunc_equiv' (sigT (fun _ : IsMonoid (mag2_add G) => 
-  sigT (fun _ : IsMonoid (mag2_mult G) => 
-    sigT (fun _ : forall a : mag2_add G, Cancel a => 
-      Distributes G))))).
-issig (BuildIsSemiring G) (@semiring_add G) (@semiring_mult G)
-  (@semiring_cancel G) (@semiring_distributes G).
+Definition One {G : semiring} : Identity (prering_mult G) :=
+ @gid (semiring_mult_monoid G).
+Definition OneV {G : semiring} : prering_mult G := One.
 
-repeat (apply @trunc_sigma;[|intro C;clear C]);apply _.
-Defined.
-
-Definition Zero {G : semiring} : G := @gid (mag2_add G) _.
-
-Definition One {G : semiring} : G := @gid (mag2_mult G) _.
-
-Lemma rmult_0_l : forall {G : semiring}, 
-forall x : G, Zero ° x = Zero.
-Proof.
-intros.
-apply semiring_cancel with (Zero ° x).
-eapply concat. Focus 2. apply (@inverse _ _ (Zero ° x)).
-apply (@monoid_id (mag2_add G)).
-apply (@concat _ _ ((Zero + Zero) ° x) _).
-symmetry. apply semiring_distributes.
-apply ap10. apply ap.
-apply (@monoid_id (mag2_add _)).
-Defined.
-
-Lemma rmult_0_r : forall {G : semiring}, 
-forall x : G, x ° Zero = Zero.
-Proof.
-intros.
-apply semiring_cancel with (x ° Zero).
-eapply concat. Focus 2. apply (@inverse _ _ (x ° Zero)).
-apply (@monoid_id (mag2_add G)).
-apply (@concat _ _ (x ° (Zero + Zero)) _).
-symmetry. apply semiring_distributes.
-apply ap.
-apply (@monoid_id (mag2_add _)).
-Defined.
-
-
-Class IsRing (G : magma2) := BuildIsRing {
+Class IsRing (G : prering) := BuildIsRing {
 ring_is_semir :> IsSemiring G;
-ropp : G -> G;
-ropp_correct :> forall x : G,
-      @IsInverse (BuildMonoid _ semiring_add) x (ropp x)
+r_opp : forall x : G, @Inverse (prering_add G) x
 }.
 
 Record ring := BuildRing {
-ring_mag2 :> magma2;
+ring_mag2 :> prering;
 ring_is_ring :> IsRing ring_mag2
 }.
 
-Definition is_ring_ring {G : magma2} {Hr : IsRing G}
+Canonical Structure is_ring_ring {G : prering} {Hr : IsRing G}
  : ring := BuildRing G Hr.
 
-Canonical Structure is_ring_ring.
 Existing Instance ring_is_ring.
 
-
-Instance ring_is_group : forall {G : magma2} {Hr : IsRing G},
- IsGroup (mag2_add G).
-Proof.
-intros. apply BuildIsGroup with semiring_add ropp.
-apply ropp_correct.
-Defined.
+Instance ring_is_group : forall (G : prering) {Hr : IsRing G},
+ IsGroup (prering_add G) := fun G Hr => BuildIsGroup _ _ r_opp.
 
 Canonical Structure ring_group : ring -> group
  := fun G => BuildGroup _ (@ring_is_group G _).
 
-Instance isring_prop : forall {G}, IsHProp (IsRing G).
-Proof.
-intro.
-apply (@trunc_equiv' (sigT (fun semir : IsSemiring G => 
-  sigT (fun opp : G -> G => 
-    forall x, @IsInverse (BuildMonoid _ semiring_add) x (opp x))))).
-issig (BuildIsRing G) (@ring_is_semir G) (@ropp G) (@ropp_correct G).
-
-apply @trunc_sigma. apply _.
-intro. apply (goppT_prop (BuildMonoid _ semiring_add)).
-Defined.
-
-Canonical Structure ring_semiring : ring -> semiring.
-Proof.
-intro G.
-apply BuildSemiring with G.
-apply _.
-Defined.
+Canonical Structure ring_semiring : ring -> semiring := 
+fun G => BuildSemiring G _.
 
 Coercion ring_semiring : ring >-> semiring.
 
-Class IsIntegralDomain (G : magma2) := BuildIsIntegralDomain {
+Definition ropp {G : ring} : forall x : G, @Inverse (prering_add G) x
+ := @gopp (ring_group G).
+
+Definition ropp' {G : prering} {Hg : IsRing G} := @ropp (@is_ring_ring G _).
+
+Instance ropp_correct : forall (G : ring) x,
+ @IsInverse (ring_group G) x (@ropp G x) := fun G => gopp_correct _.
+
+Definition roppV {G : ring} : G -> G := fun x => @inverse_val _ _ (ropp x).
+Definition roppV' {G : prering} {Hg : IsRing G} : G -> G := roppV.
+
+Class IsIntegralDomain (G : prering) := BuildIsIntegralDomain {
 integral_ring :> IsRing G;
-integral_pr :> forall a b : G, a ° b = Zero -> ((a = Zero) + (b = Zero))
+integral_pr :> forall a b : G, a ° b = ZeroV ->
+   minus1Trunc ((a = ZeroV) + (b = ZeroV));
+intdom_neq :> ~ (@paths G OneV ZeroV)
 }.
 
 Record integralDomain := BuildIntegralDomain {
-intdom_mag2 :> magma2;
+intdom_mag2 :> prering;
 intdom_is_intdom :> IsIntegralDomain intdom_mag2
 }.
 
-Definition is_intdom_intdom {G : magma2} {Hsr : IsIntegralDomain G}
+Canonical Structure is_intdom_intdom {G : prering} {Hsr : IsIntegralDomain G}
  : integralDomain := BuildIntegralDomain G Hsr.
 
-Canonical Structure is_intdom_intdom.
 Existing Instance intdom_is_intdom.
 
-Lemma intdom_partial_cancels_left : forall {G : integralDomain}, 
-forall a : G, (a = Zero -> Empty) ->
- forall b c, a°b = a°c -> b = c.
-Proof.
-intros.
-assert (a ° (b + (ropp c)) = Zero).
-eapply concat.
-apply (@semiring_distributes G _). 
-pose (@semiring_cancel G _). 
-apply (@Right_cancel _ _ (c0 (a ° c))).
-apply (@concat _ _ (a°b + (a° (ropp c) + a°c))).
-simpl. symmetry. apply (@sg_assoc (mag2_add G) _).
-eapply concat;[|symmetry;apply monoid_id].
-eapply concat;[|apply X].
-eapply concat;[ apply ap | apply (@monoid_id (mag2_add G) _)].
-eapply concat. symmetry.
-apply semiring_distributes.
-eapply concat;[apply ap | apply rmult_0_r].
-apply ropp_correct.
-apply integral_pr in X0.
-destruct X0. destruct H;auto.
-apply (@Right_cancel _ _ (@semiring_cancel G _ (ropp c))).
-eapply concat. apply p.
-symmetry. apply ropp_correct.
-Defined.
+Canonical Structure intdom_ring : integralDomain -> ring := 
+fun G => BuildRing G _.
 
-Lemma intdom_partial_cancels_right :forall {G : integralDomain}, 
-forall a : G, (a = Zero -> Empty) ->
- forall b c, b°a = c°a -> b = c.
-Proof.
-intros. apply intdom_partial_cancels_left with a;auto.
-eapply concat;[|eapply concat;[apply X|]];apply (@sg_comm (mag2_mult G) _).
-Defined.
+Coercion intdom_ring : integralDomain >-> ring.
 
-(** Field needs appartness **)
-(*
-Class IsField (G : mag2 + appartness) := BuildIsField {
-field_is_appart :> appart_ok (BuildAppart ..);
-field_is_ring :> IsRing (BuildMagma2 ..);
-finv : forall x : G, appart x Zero -> G;
-finv_correct :> forall x H, is_inverse {mult} x (finv x H)
+End Ring.
+
+Module Field.
+Export Ring.
+Export Related.
+Export OrderedMagma.
+
+Record prefield := BuildPrefield {
+prefield_prering :> prering;
+prefield_relC : Related.class prefield_prering
 }.
-*)
 
-End RingLike.
+Canonical Structure prefield_relator (F : prefield) : relator :=
+ BuildRelator F (prefield_relC F).
+Coercion prefield_relator : prefield >-> relator.
+
+Definition prefield_add (F : prefield) : oMag :=
+ BuildOMag F (raddC (prefield_prering F)) (prefield_relC F).
+Definition prefield_mult (F : prefield) : oMag :=
+ BuildOMag F (rmultC (prefield_prering F)) (prefield_relC F).
+
+Class IsField (F : prefield) := BuildIsField {
+field_is_apart :> IsApartness (prefield_relator F);
+field_is_ring :> IsRing F;
+field_add :> IsBinRegular (prefield_add F);
+field_mult :> IsBinRegular (prefield_mult F);
+field_neq : rrel ZeroV OneV;
+f_inv : forall x : F, rrel x ZeroV -> @Inverse (prering_mult F) x
+}.
+
+Record field := BuildField {
+field_prefield :> prefield;
+field_is_field :> IsField field_prefield
+}.
+
+Existing Instance field_is_field.
+Canonical Structure is_field_field (F : prefield) {Hf : IsField F}
+ := BuildField F Hf.
+
+End Field.
 
 
 
+Module Related_notation.
+Export Related.
+(*                            WIP                               *)
 
+Class Order A := order : relation A.
+Infix "<=" := order.
 
+Class OrderR := orderr : relator.
+Instance getOrder : forall {r : OrderR}, Order r := fun _ => rrel.
 
+Class SOrder A := sorder : relation A.
+Infix "<" := sorder.
 
+Class SOrderR := sorderr : relator.
+Instance getSOrder : forall {r : SOrderR}, SOrder r := fun _ => rrel.
 
+Class Apart A := apart : relation A.
+Infix "#" := apart.
+
+Class ApartR := apartr : relator.
+Instance getApart : forall {r : ApartR}, Apart r := fun _ => rrel.
+
+Class OrderR2 := orderr2 : relator2.
+Instance getOrder2_1 : forall {r : OrderR2}, Order r := fun _ => rrel2_1.
+Instance getOrder2_2 : forall {r : OrderR2}, SOrder r := fun _ => rrel2_2.
+
+(***********  Testing  ******************)
+Lemma bb : (forall r : ApartR, forall x y : r, rrel x y). Abort.
+Fail Lemma bb : (forall r : relator, forall x y : r, x # y).
+Fail Lemma bb : (forall r : ApartR, forall x y, x < y).
+Lemma bb : forall r : OrderR2, forall x y, x < y -> x <= y. Abort.
+Lemma test : forall r : relator2, forall x y : r, rrel2_1 x y.
+intros. change OrderR2 in r. change (x <= y). Abort.
+
+End Related_notation.
