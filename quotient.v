@@ -1,21 +1,22 @@
-Require Import HoTT.
+Require Import HoTT FunextAxiom UnivalenceAxiom.
 
 Open Local Scope path_scope.
 
 Module Export Quotient.
 
-Section Domain.
-Context {A : Type}.
+Local Inductive quotient : (forall A : Type, relation A -> Type) := 
+  | class_of : forall A (R : relation A), A -> quotient A R.
 
-Local Inductive quotient : relation A -> Type := 
-  | class_of : forall R, A -> quotient R.
-Axiom related_classes_eq : forall {R} {x y : A}, R x y ->
+Arguments quotient {A} R.
+Arguments class_of {A} R _.
+
+Axiom related_classes_eq : forall {A R} {x y : A}, R x y ->
  class_of R x = class_of R y.
 
-Axiom quotient_set : forall {R}, IsHSet (quotient R).
-Existing Instance quotient_set.
+Axiom quotient_is_set : forall {A} {R : relation A}, IsHSet (quotient R).
+Existing Instance quotient_is_set.
 
-Definition quotient_rect : forall {R} (P : quotient R -> Type), 
+Definition quotient_rect : forall {A} {R : relation A} (P : quotient R -> Type),
   forall dclass : forall x, P (class_of R x),
   forall dequiv : (forall x y (H : R x y), 
            transport _ (related_classes_eq H) (dclass x) = dclass y),
@@ -24,28 +25,34 @@ Proof.
 intros ? ? ? ?. intro. destruct q. apply dclass.
 Defined.
 
-Definition quotient_rect_compute : forall {R P} dclass dequiv x, 
+Definition quotient_rect_compute : forall {A} {R : relation A} {P}
+ dclass dequiv x, 
   quotient_rect P dclass dequiv (class_of R x) = dclass x.
 Proof.
 intros. reflexivity.
 Defined.
 
-Axiom quotient_rect_compute_path : forall R P dclass dequiv,
-forall x y (H : R x y), 
+Axiom quotient_rect_compute_path : forall {A} {R : relation A} {P}
+dclass dequiv x y (H : R x y), 
 apD (quotient_rect P dclass dequiv) (related_classes_eq H)
  = dequiv x y H.
 
-End Domain.
-
 End Quotient.
 
-Section Equiv.
 
-Context {funext : Funext} {uni : Univalence}.
+Section Equiv.
 
 Context {A : Type} {R : relation A}
  {Htrans : Transitive R} {Hsymm : Symmetric R}
 {Hprop : forall x y, IsHProp (R x y)}.
+
+Definition quotient_ind : forall P : quotient R -> Type, 
+forall (Hprop' : forall x, IsHProp (P (class_of _ x))), 
+(forall x, P (class_of _ x)) -> forall x, P x.
+Proof.
+intros ? ? dclass. apply quotient_rect with dclass.
+intros. apply Hprop'.
+Defined.
 
 Lemma quotient_path2 : forall {x y : quotient R} (p q : x=y), p=q.
 Proof.
@@ -54,30 +61,29 @@ Defined.
 
 Definition in_class : quotient R -> A -> Type.
 Proof.
-pose (T := @quotient_rect A R (fun q => A -> Type)).
-apply (T R).
+apply (@quotient_rect A R (fun _ => A -> Type) R).
 intros.
 eapply concat. apply transport_const.
-apply funext. intro z.
-apply uni. apply equiv_iff_hprop.
+apply funext_axiom. intro z.
+apply univalence_axiom. apply equiv_iff_hprop.
 intros. eauto.
 intros. eauto.
 Defined.
 
 Context {Hrefl : Reflexive R}.
 
-Lemma in_class_pr : forall x y, in_class (class_of _ x) y = R x y.
+Lemma in_class_pr : forall x, in_class (class_of _ x) = R x.
 Proof.
-intros. unfold in_class.
-simpl. reflexivity.
+intros. reflexivity.
 Defined.
 
-Instance in_class_prop : forall q x, IsHProp (in_class q x).
+Instance in_class_is_prop : forall q x, IsHProp (in_class q x).
 Proof.
-apply (@quotient_rect A R (fun q => forall x, IsHProp (in_class q x)) 
-    (fun x y => transport _ (in_class_pr x y) (Hprop x y))).
-intros.
-apply allpath_hprop.
+assert (H : forall x q, IsHProp (in_class q x)).
+intro;apply quotient_ind.
+intros;apply _.
+intros. apply Hprop.
+exact (fun q x => H x q).
 Defined.
 
 Lemma quotient_rect_prop : forall (P : quotient R -> Type) 
@@ -97,8 +103,8 @@ apply (@quotient_rect A R
   (fun x y H => related_classes_eq H)).
 intros.
  simpl.
-apply funext. intro z.
-apply funext;intro H'.
+apply funext_axiom. intro z.
+apply funext_axiom;intro H'.
 apply quotient_path2.
 Defined.
 
@@ -106,13 +112,11 @@ Lemma classes_eq_related : forall x y,
 class_of R x = class_of R y -> R x y.
 Proof.
 intros x y H.
-pattern (R x y).
-eapply transport. apply in_class_pr.
+change (in_class (class_of R x) y).
 pattern (class_of R x). eapply transport.
 symmetry. apply H.
 simpl. apply Hrefl.
 Defined.
-
 
 Definition quotient_rec : forall {B : Type}, 
   forall dclass : (forall x : A, B), 
@@ -137,7 +141,7 @@ intros ? ? ? Hx. apply dequiv. apply Hrefl. apply Hx.
 refine (quotient_rec 
   (fun x => quotient_rec (dclass x) (dequiv0 x)) _).
 intros x x' Hx.
-apply funext.
+apply funext_axiom.
 
 red.
 assert (dequiv1 : forall y : A,
@@ -152,13 +156,6 @@ intros.
 apply Hset.
 Defined.
 
-Definition quotient_ind : forall P : quotient R -> Type, 
-forall (Hprop' : forall x, IsHProp (P (class_of _ x))), 
-(forall x, P (class_of _ x)) -> forall x, P x.
-Proof.
-intros ? ? dclass. apply quotient_rect with dclass.
-intros. apply Hprop'.
-Defined.
 
 End Equiv.
 
@@ -187,7 +184,5 @@ Defined.
 
 End Compatible.
 
-Arguments quotient_rec2 {_ _ _ _ _ _} _ _ _ _.
-
-
+Arguments quotient_rec2 {_ _ _ _ _} _ _ _ _.
 
