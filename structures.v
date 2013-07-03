@@ -5,6 +5,23 @@ Require Import hit.minus1Trunc.
 Open Scope path_scope.
 Open Scope equiv_scope.
 
+(*
+General note:
+some structures (monoids, groups, fields, etc) contain actual values (identity, inverses, etc)
+this results in record projections like 
+  is_val : forall G:base, IsFoo G -> ValueType G
+these will also  be used with packed structures, generating a function
+  pack_val : forall G:foo, ValueType (base_of_foo G)
+    := fun G => is_val (base_of_foo G) (foo_is_foo G)
+One pack_val is defined, all other definitions, properties, etc should use it instead of is_val
+
+This is because foo_is_foo (BuildFoo G Hg) simplifies to Hg, but BuildFoo (base_of_foo G) (foo_is_foo G) does not simplify to G
+
+Note that we usually define pack_val' : forall G:base, IsFoo G -> ValueType G
+  := fun G Hg => pack_val (BuildFoo G Hg)
+which simplifies to is_val yet works for theorems using pack_val
+*)
+
 Module Magma.
 
 Definition law (A : Type) := A -> A -> A.
@@ -70,6 +87,9 @@ identity_pr : IsId identity_val
 }.
 Existing Instance identity_pr.
 
+Arguments identity_val {_} _.
+Arguments identity_pr {_} _.
+
 Class IsMonoid (G : magma) := BuildIsMonoid {
 monoid_is_sg :> IsSemigroup G;
 monoid_id : Identity G
@@ -80,15 +100,16 @@ monoid_mag :> magma;
 monoid_is_monoid :> IsMonoid monoid_mag
 }.
 
-Definition gid {G : monoid} : Identity G := @monoid_id G G.
-Definition gidV {G : monoid} : G := gid.
-
-Instance gid_id : forall G, IsId (@gid G) := fun G => _.
-
 Canonical Structure is_mono_mono {G : magma} {Hmono : IsMonoid G} : monoid
  := BuildMonoid G Hmono.
 
 Existing Instance monoid_is_monoid.
+
+Definition gid {G : monoid} : Identity G := @monoid_id G G.
+Definition gidV {G : monoid} : G := gid.
+
+Definition gid' {G : magma} {Hg : IsMonoid G} : Identity G := gid.
+Definition gidV' {G : magma} {Hg : IsMonoid G} : G := gid.
 
 Canonical Structure monoid_sg (G : monoid) : semigroup := 
 BuildSemigroup G _.
@@ -569,9 +590,9 @@ Notation "- x" := (roppV x).
 
 Class IsIntegralDomain (G : prering) := BuildIsIntegralDomain {
 integral_ring :> IsRing G;
-integral_pr :> forall a : G, ~ a = ZeroV -> forall b : G, ~ b = ZeroV ->
-   ~ a°b = ZeroV;
-intdom_neq :> ~ (@paths G OneV ZeroV)
+integral_pr :> forall a : G, ~ a = ZeroV' -> forall b : G, ~ b = ZeroV' ->
+   ~ a°b = ZeroV';
+intdom_neq :> ~ (@paths G OneV' ZeroV')
 }.
 
 Record integralDomain := BuildIntegralDomain {
