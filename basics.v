@@ -2,6 +2,23 @@ Require Import HoTT FunextAxiom UnivalenceAxiom.
 Require Import unique_choice.
 Require Export structures.
 
+Instance iff_trans : Transitive iff.
+Proof.
+red. intros A B C [H H'] [H0 H0'].
+split;
+apply (@compose _ B);assumption.
+Defined.
+
+Instance iff_symm : Symmetric iff.
+Proof.
+red. intros A B [H H'];split;assumption.
+Defined.
+
+Instance iff_refl : Reflexive iff.
+Proof.
+intros A. split;exact idmap.
+Defined.
+
 Module Magma_pr.
 Export Magma.
 
@@ -465,20 +482,41 @@ repeat (apply hprop_forall;intro). apply minus1Trunc_is_prop.
 Defined.
 
 Definition isapart_sig : forall r, sigT (fun _ : IsIrreflexive r =>
-sigT (fun _ : IsSymmetric r => IsCotransitive r)) <~> IsApartness r.
+sigT (fun _ : IsSymmetric r => sigT (fun _ : IsCotransitive r => 
+ forall x y : r, ~ rrel x y -> x=y))) <~> IsApartness r.
 Proof.
 intros.
-issig (BuildIsApartness r) (@apart_irrefl r) (@apart_symm r) (@apart_cotrans r).
+issig (BuildIsApartness r) (@apart_irrefl r) (@apart_symm r) (@apart_cotrans r)
+  (@apart_tight r).
 Defined.
 
 Instance isapart_prop : forall {r : relator}
- {Hprop : forall x y : r, IsHProp (rrel x y)}, IsHProp (IsApartness r).
+ {Hpr : IsMereRelator r}, IsHProp (IsApartness r).
 Proof.
 intros;eapply trunc_equiv'.
 apply isapart_sig.
 apply @trunc_sigma. apply _.
 intro. apply @trunc_sigma. apply _.
-intro;apply _.
+intro. apply @trunc_sigma. apply _.
+intro. repeat (apply hprop_forall;intro). apply hprop_allpath. apply Hpr.
+Defined.
+
+Lemma apart_prove_empty : forall {r : relator} {Ha : IsApartness r}, 
+forall x y : r, (rrel x y -> Empty) -> (~x=y -> Empty).
+Proof.
+intros ? ? ? ? ? H.
+apply H. apply apart_tight. assumption.
+Defined.
+
+Lemma apart_prove_eq : forall {r : relator} {Ha : IsApartness r}, 
+forall a b x y : r, (rrel x y -> a=b) -> (~x=y -> a=b).
+Proof.
+intros ? ? ? ? ? ? H H'.
+apply apart_tight. intro H0.
+assert (Hx : ~ ~ rrel x y).
+intro Hx. apply H'. apply apart_tight. assumption.
+apply Hx;clear Hx;intro Hx.
+eapply irrefl_neq. apply H0. auto.
 Defined.
 
 Instance islinear_prop : forall {r}, IsHProp (IsLinear r).
@@ -519,12 +557,44 @@ destruct (strict_poset_antisymm _ _ _ Hx Hy).
 destruct (strict_poset_antisymm _ _ _ Hx Hy).
 Defined.
 
+Lemma poset2_lt_le : forall {r : relator2} {Hpo : IsPoset2 r} (x y : r), 
+rrel2_2 x y -> rrel2_1 x y.
+Proof.
+intros. apply poset2_tight. red. apply strict_poset_antisymm.
+apply _. assumption.
+Defined.
+
+Lemma poset2_linear_le_lt_trans : forall {r : relator2} 
+{Hpr : relatorProp (relator2_2 r)}
+{Hpo : IsPoset2 r}
+{Hlin : IsStrictLinear (relator2_2 r)}, 
+forall x y : r, rrel2_1 x y -> forall z, rrel2_2 y z -> rrel2_2 x z.
+Proof.
+intros ? ? ? ? ? ? H ? H'.
+eapply minus1Trunc_rect_nondep;[|apply Hpr|apply Hlin;apply H'].
+intros [H0|H0];[|apply H0]. fold (@rrel2_2 r) in H0.
+apply poset2_tight in H. destruct H;assumption.
+Defined.
+
+Lemma poset2_linear_lt_le_trans : forall {r : relator2}
+{Hpr : relatorProp (relator2_2 r)}
+{Hpo : IsPoset2 r}
+{Hlin : IsStrictLinear (relator2_2 r)}, 
+forall x y : r, rrel2_2 x y -> forall z, rrel2_1 y z -> rrel2_2 x z.
+Proof.
+intros ? ? ? ? ? ? H ? H'.
+eapply minus1Trunc_rect_nondep;[|apply Hpr|apply Hlin;apply H].
+intros [H0|H0];[apply H0|]. fold (@rrel2_2 r) in H0.
+apply poset2_tight in H'. destruct H';assumption.
+Defined.
+
 Lemma apart_from_strict_poset : forall (r : relator2)
 {Hstrict : IsStrictPoset (relator2_2 r)} {Hlin : IsStrictLinear (relator2_2 r)},
 (forall x y : r, rrel2_1 x y <-> (rrel2_2 x y \/ rrel2_2 y x)) ->
+(forall x y : r, ~ rrel2_1 x y -> x=y) ->
 IsApartness (relator2_1 r).
 Proof.
-intros ? ? ? H;split.
+intros ? ? ? H ?;split.
 - intros x Hx.
   apply H in Hx. destruct Hx as [Hx|Hx];eapply strictposet_irrefl;apply Hx.
 - intros x y H'. apply H in H';apply H.
@@ -534,6 +604,42 @@ intros ? ? ? H;split.
   apply Hlin in H';(eapply minus1Trunc_rect_nondep;
   [ | apply minus1Trunc_is_prop |apply (H' z)]);intros [H0|H0];apply min1;
   solve [left;apply H;auto | right;apply H;auto].
+- assumption.
+Defined.
+
+Lemma neq_irrefl : forall r : relator, (forall x y : r, rrel x y -> ~ x=y) -> 
+IsIrreflexive r.
+Proof.
+intros ? H0;intros x H.
+apply H0 in H. apply H;reflexivity.
+Defined.
+
+Lemma neq_symm : forall r : relator, (forall x y : r, rrel x y <-> ~x=y) -> 
+IsSymmetric r.
+Proof.
+red;red;intros ? H ? ? H'.
+apply H. apply H in H'. intro H0;apply H';symmetry;assumption.
+Defined.
+
+Lemma neq_cotrans : forall r : relator, decidable_paths r ->
+(forall x y : r, rrel x y <-> ~x=y) -> IsCotransitive r.
+Proof.
+intros ? Hdec Hneq x y H z.
+apply min1.
+destruct (Hdec x z) as [[]|H']. right. assumption.
+left;auto;apply Hneq;auto.
+Defined.
+
+Lemma neq_apart : forall r : relator, decidable_paths r ->
+(forall x y : r, rrel x y <-> ~x=y) -> IsApartness r.
+Proof.
+intros ? Hdec Hneq;split.
+apply neq_irrefl;intros;apply Hneq;assumption.
+apply neq_symm;assumption.
+apply neq_cotrans;assumption.
+intros ? ? H.
+destruct (Hdec x y) as [?|n]. assumption.
+apply Hneq in n. destruct H;assumption.
 Defined.
 
 Instance maximum_is_supremum : forall r P m, 
@@ -713,6 +819,32 @@ repeat (apply @trunc_sigma;[try apply _ | intro]).
 apply _.
 Defined.
 
+Instance doubleton_is_prop : forall {T} {a b x : T}, IsHProp (doubleton a b x).
+Proof.
+intros;apply minus1Trunc_is_prop.
+Defined.
+
+Definition doubleton_comm_fun : forall {T} (a b x : T),
+ doubleton a b x -> doubleton b a x.
+Proof.
+intros ? ? ? ?;apply minus1Trunc_rect_nondep.
+intros [H|H];apply min1;auto.
+apply minus1Trunc_is_prop.
+Defined.
+
+Lemma doubleton_comm_equiv : forall {T} (a b x : T),
+ doubleton a b x <~> doubleton b a x.
+Proof.
+intros. apply equiv_iff_hprop;apply doubleton_comm_fun.
+Defined.
+
+Lemma doubleton_comm : forall {T} {a b : T},
+ doubleton a b = doubleton b a.
+Proof.
+intros. apply funext_axiom.
+intro x;apply univalence_axiom. apply doubleton_comm_equiv.
+Defined.
+
 Lemma total_order_max2 : forall {r : relator} {Hset : IsHSet r}
 {Hpr : forall x y : r, IsHProp (rrel x y)} {Hto : IsTotalOrder r},
 forall a b, Maximum2 r a b.
@@ -756,51 +888,125 @@ intros. apply maximum_supremum. apply total_order_max2.
 intros. apply minimum_infimum. apply total_order_min2.
 Defined.
 
-(* Not sure if useful
-Definition inverseRel (r : relator) : relator := 
-  BuildRelator r (Related.BuildClass r (fun x y : r => rrel y x)).
+Definition is_union {T : Type} (P1 P2 P' : T -> Type) :=
+ forall x, P' x <-> minus1Trunc (P1 x \/ P2 x).
+Definition is_inter {T : Type} (P1 P2 P' : T -> Type) :=
+ forall x, P' x <-> (P1 x /\ P2 x).
 
-Lemma inverse_inverse_rel : forall r, inverseRel (inverseRel r) = r.
+Definition singleton {T : Type} (x : T) := doubleton x x.
+
+Instance singleton_min : forall {r : relator} {Hpr : relatorProp r}
+ {Hr : IsReflexive r} x, IsMinimum r (singleton x) x.
 Proof.
-destruct r as [r [l]]. reflexivity.
+intros. split.
+intros y. apply minus1Trunc_rect_nondep;[|apply Hpr].
+intros [[]|[]];apply Hr.
+apply min1;left;reflexivity.
 Defined.
 
-Instance upper_inverse_lower : forall r P m, IsUpper r P m ->
- IsLower (inverseRel r) P m.
+Lemma singleton_paths : forall {T : Type} {Hset : IsHSet T} (x : T),
+singleton x = paths x.
 Proof.
-intros;assumption.
+intros. apply funext_axiom;intros y.
+apply univalence_axiom. apply @equiv_iff_hprop.
+apply minus1Trunc_is_prop. apply hprop_allpath;apply Hset.
+apply minus1Trunc_rect_nondep. intros [?|?];assumption.
+apply Hset.
+intros H;apply min1;left;assumption.
 Defined.
 
-Instance lower_inverse_upper : forall r P m, IsLower r P m ->
- IsUpper (inverseRel r) P m.
+Section UnionInterSec.
+
+Context {r : relator} {Hset : IsHSet r} {Hpr : relatorProp r}
+{Hpo : IsPoset r}
+{P1 P2 P' : r -> Type}
+{Hp1 : forall x, IsHProp (P1 x)} {Hp2 : forall x, IsHProp (P2 x)}
+{Hp' : forall x, IsHProp (P' x)}.
+
+Lemma lower_union_inter : is_union P1 P2 P' ->
+ is_inter (IsLower r P1) (IsLower r P2) (IsLower r P').
 Proof.
-intros;assumption.
+intros Hu x;split.
+- intro H;split;
+  intros y Hy; apply H;
+  apply Hu; apply min1;auto.
+- intros [H1 H2] y H.
+  apply Hu in H. revert H. apply minus1Trunc_rect_nondep;[|apply Hpr].
+  intros [?|?];auto.
 Defined.
 
-Instance ismax_inverse_ismin : forall r P m, IsMaximum r P m ->
- IsMinimum (inverseRel r) P m.
+Lemma upper_union_inter : is_union P1 P2 P' ->
+ is_inter (IsUpper r P1) (IsUpper r P2) (IsUpper r P').
 Proof.
-intros ? ? ? H;split;apply H.
+intros Hu x;split.
+- intro H;split;
+  intros y Hy; apply H;
+  apply Hu; apply min1;auto.
+- intros [H1 H2] y H.
+  apply Hu in H. revert H. apply minus1Trunc_rect_nondep;[|apply Hpr].
+  intros [?|?];auto.
 Defined.
 
-Instance ismin_inverse_ismax : forall r P m, IsMinimum r P m ->
- IsMaximum (inverseRel r) P m.
+Lemma infimum_of_union : is_union P1 P2 P' -> 
+forall a, IsInfimum r P1 a -> forall b, IsInfimum r P2 b ->
+forall x, IsInfimum r P' x -> IsInfimum r (doubleton a b) x.
 Proof.
-intros ? ? ? H;split;apply H.
+intros Hu ? Ha ? Hb ? Hx.
+split.
+- intros y Hy.
+  apply Hx. intros z Hz.
+  apply Hu in Hz. revert Hz;apply minus1Trunc_rect_nondep;[|apply Hpr].
+  intros [Hz|Hz].
+  apply order_trans with a. apply Hy;apply min1;auto.
+  apply Ha. assumption.
+  apply order_trans with b. apply Hy;apply min1;auto.
+  apply Hb. assumption.
+- intros y.
+  apply minus1Trunc_rect_nondep;[|apply Hpr].
+  intros [[]|[]];clear y.
+  apply Ha. apply lower_union_inter. assumption. apply _.
+  apply Hb. apply lower_union_inter. assumption. apply _.
 Defined.
 
-Lemma inverse_ismax_ismin : forall r P m, IsMaximum (inverseRel r) P m ->
- IsMinimum r P m.
+Lemma infimum_to_union : is_union P1 P2 P' ->
+forall a, IsInfimum r P1 a -> forall b, IsInfimum r P2 b ->
+forall x, IsInfimum r (doubleton a b) x -> IsInfimum r P' x.
 Proof.
-intros ? ? ? H;split;apply H.
+intros Hu ? Ha ? Hb ? Hx.
+split.
+- intros y Hy.
+  apply Hx.
+  intros z. apply minus1Trunc_rect_nondep;[|apply Hpr]. intros [[]|[]].
+  apply Ha. apply lower_union_inter;assumption.
+  apply Hb. apply lower_union_inter;assumption.
+- intros y Hy. apply Hu in Hy;revert Hy.
+  apply minus1Trunc_rect_nondep;[|apply Hpr].
+  intros [Hy|Hy].
+  apply order_trans with a. apply Hx. apply min1;auto.
+  apply Ha. assumption.
+  apply order_trans with b. apply Hx. apply min1;auto.
+  apply Hb. assumption.
 Defined.
 
-Lemma inverse_ismin_ismax : forall r P m, IsMinimum (inverseRel r) P m ->
- IsMaximum r P m.
+Lemma infimum_union : is_union P1 P2 P' ->
+forall a, IsInfimum r P1 a -> forall b, IsInfimum r P2 b ->
+forall x, IsInfimum r P' x <-> IsInfimum r (doubleton a b) x.
 Proof.
-intros ? ? ? H;split;apply H.
+intros Hu ? Ha ? Hb x.
+split.
+apply infimum_of_union;assumption.
+apply infimum_to_union;assumption.
 Defined.
-*)
+
+Lemma infimum_union_and : is_union P1 P2 P' -> forall x, 
+IsInfimum r P1 x -> IsInfimum r P2 x ->
+IsInfimum r P' x.
+Proof.
+intros Hu;intros. apply infimum_to_union with x x;try assumption.
+apply _.
+Defined.
+
+End UnionInterSec.
 
 End Related_pr.
 
@@ -1021,11 +1227,29 @@ apply BuildIsRing. apply BuildIsSemiring;apply _.
 apply gopp.
 Defined.
 
-Lemma intdom_partial_cancels_left : forall {G : integralDomain}
+Lemma strictintegral_integral_pr : forall G {Hr: IsStrictIntegral G}, 
+forall a : G, ~a = ZeroV -> forall b : G, ~ b = ZeroV -> ~ a°b = ZeroV.
+Proof.
+intros ? ? ? Ha ? Hb H.
+apply Hr in H. revert H. apply minus1Trunc_rect_nondep.
+intros [H|H];auto.
+intros [].
+Defined.
+
+Lemma strictintegral_intdom : forall (G : ring) {Hr : IsStrictIntegral G},
+~ @OneV G = ZeroV ->
+  IsIntegralDomain G.
+Proof.
+intros. apply (BuildIsIntegralDomain _ _).
+apply strictintegral_integral_pr. apply _.
+assumption.
+Defined.
+
+Lemma intdom_partial_cancels_left : forall {G : ring} {Hr : IsStrictIntegral G}
  {Hset : IsHSet G}, forall a : G, ~ a = ZeroV ->
   @Lcancel (prering_mult G) a.
 Proof.
-intros ? ? ? H. red. fold (@rmult G). intros.
+intros ? ? ? ? H. red. fold (@rmult G). intros.
 assert (a ° (b + (roppV c)) = ZeroV).
 eapply concat.
 apply (@semiring_distributes G _). 
@@ -1040,8 +1264,8 @@ eapply concat. symmetry.
 apply semiring_distributes.
 eapply concat;[apply ap | apply rmult_0_r].
 apply id_unique;apply _.
-apply (@integral_pr G G) in X0.
-eapply minus1Trunc_rect_nondep;[|apply Hset|apply X0];clear X0.
+apply Hr in X0. revert X0.
+apply minus1Trunc_rect_nondep;[|apply Hset].
 intros [p | p].
 destruct H;auto.
 assert (Hcan : forall a : prering_add G, Rcancel a). apply _.
@@ -1050,15 +1274,15 @@ eapply concat. apply p.
 symmetry. apply id_unique;apply _.
 Defined.
 
-Lemma intdom_partial_cancels_right :forall {G : integralDomain}
+Lemma intdom_partial_cancels_right :forall  {G : ring} {Hr : IsStrictIntegral G}
  {Hset : IsHSet G}, forall a : G, ~ a = ZeroV ->
   @Rcancel (prering_mult G) a.
 Proof.
-intros ? ? ? ? ? ? X. apply intdom_partial_cancels_left with a;auto.
+intros ? ? ? ? ? ? ? X. apply intdom_partial_cancels_left with a;auto.
 eapply concat;[|eapply concat;[apply X|]];apply (@sg_comm (prering_mult G) _).
 Defined.
 
-Lemma intdom_partial_cancels : forall {G : integralDomain}
+Lemma intdom_partial_cancels : forall  {G : ring} {Hr : IsStrictIntegral G}
  {Hset : IsHSet G}, forall a : G, ~ a = ZeroV ->
   @Cancel (prering_mult G) a.
 Proof.
@@ -1068,4 +1292,492 @@ assumption.
 Defined.
 
 End Ring_pr.
+
+Module RelatorInverse.
+Export Related_pr OMag_pr.
+Import minus1Trunc.
+
+Definition inverseRel (r : relator) := easyRelator r (fun x y => rrel y x).
+
+Notation "r ^-1" := (inverseRel r).
+
+Lemma inverse_inverse : forall r, r ^-1 ^-1 = r.
+Proof.
+intros [T [r]];reflexivity.
+Defined.
+
+Instance inverse_refl : forall {r} {Hr : IsReflexive r}, IsReflexive (r ^-1)
+ := fun _ => idmap.
+
+Instance inverse_symm : forall {r} {Hs : IsSymmetric r}, IsSymmetric (r ^-1).
+Proof.
+intros ? ? ? ?;apply Hs.
+Defined.
+
+Instance inverse_trans : forall {r} {Ht : IsTransitive r}, IsTransitive (r ^-1).
+Proof.
+intros ? ? ? ? ? H H';apply Ht with y;assumption.
+Defined.
+
+Definition inverse_P : forall P : relator -> Prop, 
+(forall r, P r -> P (inverseRel r)) -> forall r, P (r ^-1) -> P r.
+Proof.
+intros ? H [r [rel]] Hr.
+set (R := {| runder := r; rrelC := {| classV := rel |} |}) in *.
+change (P (inverseRel (inverseRel R))). apply H. assumption.
+Defined.
+
+Instance inverse_equivalence : forall {r} {He : IsEquivalence r},
+ IsEquivalence (r ^-1).
+Proof.
+intros;split;apply _.
+Defined.
+
+Instance inverse_is_prop : forall {r} {Hp : relatorProp r}, relatorProp (r ^-1)
+ := fun _ H x y => H y x.
+
+Instance inverse_is_mere : forall {r} {Hm : IsMereRelator r},
+ IsMereRelator (r ^-1).
+Proof.
+intros;split. change (IsHSet r). apply _. apply _.
+Defined.
+
+Instance inverse_antisymm : forall {r} {Ha : IsAntisymmetric r},
+ IsAntisymmetric (r ^-1).
+Proof.
+intros ? ? ? ? H H'. apply Ha;assumption.
+Defined.
+
+Instance inverse_irrefl : forall {r} {Hi : IsIrreflexive r},
+ IsIrreflexive (r ^-1) := fun _ => idmap.
+
+Instance inverse_poset : forall {r} {Hp : IsPoset r}, IsPoset (r ^-1).
+Proof.
+intros;split;apply _.
+Defined.
+
+Instance inverse_strict_linear : forall {r} {Hs : IsStrictLinear r},
+ IsStrictLinear (r ^-1).
+Proof.
+intros;intros ? ? H ?.
+eapply minus1Trunc_rect_nondep;[|apply minus1Trunc_is_prop|apply Hs;apply H].
+intros [H'|H'];apply min1;[right|left];apply H'.
+Defined.
+
+Instance inverse_cotrans :  forall {r} {Hs : IsCotransitive r},
+ IsCotransitive (r ^-1).
+Proof.
+apply @inverse_strict_linear.
+Defined.
+
+Instance inverse_apart : forall {r} {Ha : IsApartness r}, IsApartness (r ^-1).
+Proof.
+intros;split;try apply _.
+intros ? ? H;apply Ha. intro H'. apply H. apply Ha. assumption.
+Defined.
+
+Instance lower_inverse_upper : forall {r P m} {H : IsLower r P m},
+IsUpper (r ^-1) P m.
+Proof.
+intros. apply H.
+Defined.
+
+Instance upper_inverse_lower : forall {r P m} {H : IsUpper r P m},
+IsLower (r ^-1) P m.
+Proof.
+intros. apply H.
+Defined.
+
+Definition inverse_lower_upper : forall {r : relator}
+{P : r->Type} {m:r} {H : IsLower (r ^-1) P m},
+IsUpper r P m.
+Proof.
+intros;apply H.
+Defined.
+
+Definition inverse_upper_lower : forall {r : relator}
+{P : r->Type} {m:r} {H : IsUpper (r ^-1) P m},
+IsLower r P m.
+Proof.
+intros;apply H.
+Defined.
+
+Lemma inverse_upper_rw : IsUpper = fun r P m => IsLower (inverseRel r) P m.
+Proof.
+reflexivity.
+Defined.
+
+Lemma inverse_lower_rw : IsLower = fun r P m => IsUpper (inverseRel r) P m.
+Proof.
+reflexivity.
+Defined.
+
+Definition ismax_sig_rw := fun r P m => path_universe (ismax_sig r P m).
+Definition ismin_sig_rw := fun r P m => path_universe (ismin_sig r P m).
+
+Lemma inverse_ismax_iff : forall r P m, IsMaximum r P m <->
+ IsMinimum (r ^-1) P m.
+Proof.
+intros;split;intros;split;apply X.
+Defined.
+
+Lemma inverse_ismin_iff : forall r P m, IsMinimum r P m <->
+ IsMaximum (r ^-1) P m.
+Proof.
+intros;split;intros;split;apply X.
+Defined.
+
+Lemma inverse_ismax_rw : IsMaximum = fun r => IsMinimum (r ^-1).
+Proof.
+apply funext_axiom;intro r.
+apply funext_axiom;intro P.
+apply funext_axiom;intro m.
+eapply concat. symmetry. apply ismax_sig_rw.
+eapply concat;[| apply ismin_sig_rw].
+reflexivity.
+Defined.
+
+Lemma inverse_ismin_rw : IsMinimum = fun r => IsMaximum (r ^-1).
+Proof.
+apply funext_axiom;intro r.
+apply funext_axiom;intro P.
+apply funext_axiom;intro m.
+eapply concat. symmetry. apply ismin_sig_rw.
+eapply concat;[| apply ismax_sig_rw].
+reflexivity.
+Defined.
+
+Lemma inverse_isinf_iff : forall r P m, IsInfimum r P m <->
+ IsSupremum (r ^-1) P m.
+Proof.
+intros. apply inverse_ismax_iff.
+Defined.
+
+Lemma inverse_issup_iff : forall r P m, IsSupremum r P m <->
+ IsInfimum (r ^-1) P m.
+Proof.
+intros. apply inverse_ismin_iff.
+Defined.
+
+Lemma inverse_isinf_rw : IsInfimum = fun r => IsSupremum (r^-1).
+Proof.
+unfold IsInfimum;unfold IsSupremum.
+change ((fun (r : relator) (P : r -> Type) (m : r) =>
+ IsMaximum r (IsLower r P) m)  =
+(fun (r : relator) (P : r -> Type) (m : r) => IsMinimum r ^-1 (IsLower r P) m)).
+apply (@ap _ _ (fun IS : forall r : relator, (r -> Type) -> r -> Type
+  => fun r P m => IS r (IsLower r P) m) IsMaximum (fun r => IsMinimum r^-1)).
+apply inverse_ismax_rw.
+Defined.
+
+Lemma inverse_issup_rw : IsSupremum = fun r => IsInfimum (r^-1).
+Proof.
+change ((fun (r : relator) (P : r -> Type) (m : r) =>
+ IsMinimum r (IsUpper r P) m)  =
+(fun (r : relator) (P : r -> Type) (m : r) => IsMaximum r ^-1 (IsUpper r P) m)).
+apply (@ap _ _ (fun IS : forall r : relator, (r -> Type) -> r -> Type
+  => fun r P m => IS r (IsUpper r P) m) IsMinimum (fun r => IsMaximum r^-1)).
+apply inverse_ismin_rw.
+Defined.
+
+
+End RelatorInverse.
+
+Module Lattice_pr.
+Export Lattice Related_pr RelatorInverse.
+Import minus1Trunc.
+
+Section Meet_to_order.
+
+Context {r : oMag} {Hs : IsHSet r} {Hp : relatorProp r}
+{Hr : IsMeetSemiLattice r}.
+
+
+Instance semilattice_meet_refl : IsReflexive r.
+Proof.
+intros x.
+apply Hr. apply Hr.
+Defined.
+
+Instance semilattice_meet_antisymm : IsAntisymmetric r.
+Proof.
+intros x y H H'.
+apply Hr in H;apply Hr in H'.
+path_via (gop x y). path_via (gop y x).
+apply commutative.
+Defined.
+
+Instance semilattice_meet_trans : IsTransitive r.
+Proof.
+intros x y z H H'.
+apply Hr in H;apply Hr in H';apply Hr.
+path_via (gop (gop x y) z). apply (ap (fun g => gop g z)).
+apply inverse;assumption.
+path_via (gop x (gop y z)). apply inverse;apply associative.
+path_via (gop x y). apply ap. assumption.
+Defined.
+
+Instance semilattice_meet_poset : IsPoset r.
+Proof.
+split;apply _.
+Defined.
+
+Instance meet_is_inf2 : forall {x y : r}, IsInfimum r (doubleton x y) (gop x y).
+Proof.
+intros. split.
+intros z H.
+apply Hr. path_via (gop (gop z x) y). apply associative.
+path_via (gop z y);[apply (ap (fun g => gop g y))|];apply Hr;apply H;
+apply min1;auto.
+intros z H.
+eapply minus1Trunc_rect_nondep;[|apply Hp|apply H].
+clear H. intros [[]|[]];apply Hr.
+- path_via (gop (gop x x) y).
+  path_via (gop x (gop y x)). symmetry;apply associative.
+  path_via (gop x (gop x y)). apply ap;apply commutative.
+  apply associative.
+  apply (ap (fun g => gop g y)).
+  apply isidempotent.
+- path_via (gop x (gop y y)).
+  symmetry;apply associative.
+  apply ap.
+  apply isidempotent.
+Defined.
+
+End Meet_to_order.
+
+Section Order_to_meet.
+
+Context {r : oMag} {Hset : IsHSet r} {Hpr : relatorProp r} {Hpo : IsPoset r}
+{Hmeet : forall a b : r, IsInfimum r (doubleton a b) (gop a b)}.
+
+Instance meet_comm : Commutative r.
+Proof.
+intros x y.
+eapply infimum_unicity.
+apply Hpo.
+apply Hmeet.
+change ((fun P => IsInfimum r P (gop y x)) (doubleton x y)).
+eapply transport;[|apply Hmeet]. apply doubleton_comm.
+Defined.
+
+Instance meet_assoc : Associative r.
+Proof.
+intros x y z.
+eapply infimum_unicity. apply _.
+apply Hmeet.
+split.
+- intros a Ha.
+  apply Hmeet. intros b.
+  apply minus1Trunc_rect_nondep;[|apply Hpr].
+  intros [[]|[]];clear b.
+  apply Hmeet. intros b.
+  apply minus1Trunc_rect_nondep;[|apply Hpr].
+  intros [[]|[]];clear b.
+  apply Ha;apply min1. auto.
+  apply order_trans with (gop y z).
+  apply Ha. apply min1;auto.
+  apply Hmeet. apply min1;auto.
+  apply order_trans with (gop y z).
+  apply Ha. apply min1;auto.
+  apply Hmeet. apply min1;auto.
+- intros a. apply minus1Trunc_rect_nondep;[|apply Hpr].
+  intros [[]|[]];clear a.
+  apply order_trans with (gop x y).
+  apply (Hmeet (gop x y) z). apply min1;auto.
+  apply Hmeet. apply min1;auto.
+  apply Hmeet. intros a.
+  apply minus1Trunc_rect_nondep;[|apply Hpr].
+  intros [[]|[]];clear a.
+  apply order_trans with (gop x y).
+  apply (Hmeet (gop x y) z). apply min1;auto.
+  apply Hmeet. apply min1;auto.
+  apply Hmeet. apply min1;auto.
+Defined.
+
+Instance meet_sg : IsSemigroup r := BuildIsSemigroup _ _ _.
+
+Instance meet_idempotent : IsIdempotent r.
+Proof.
+intros x.
+eapply infimum_unicity. apply _.
+apply Hmeet.
+apply _. (* by singleton_min *)
+Defined.
+
+Lemma meet_gop_eq_pr : forall x y z : r, IsInfimum r (doubleton x y) z -> 
+gop x y = z.
+Proof.
+intros ? ? ?. apply infimum_unicity;apply _.
+Defined.
+
+Instance meet_pr : IsLatticeMeetR r.
+Proof.
+intros x y.
+split. intros.
+eapply meet_gop_eq_pr.
+apply minimum_is_infimum. split.
+intros a. apply minus1Trunc_rect_nondep;[|apply Hpr].
+intros [[]|[]]. apply Hpo. assumption.
+apply min1;auto.
+intros []. apply Hmeet. apply min1;auto.
+Defined.
+
+Instance meet_mag_pr : IsLatticeMag r := BuildIsLatticeMag _ _ _.
+
+Instance meet_semilattice : IsMeetSemiLattice r := BuildIsMeetSemiLattice _ _ _.
+
+End Order_to_meet.
+
+Definition semil_inverse (r : oMag) : oMag := 
+BuildOMag r (olawC r) (Related.BuildClass (fun x y => rrel y x)).
+
+Definition semil_inverse_idem : forall r, semil_inverse (semil_inverse r) = r.
+Proof.
+intros [r op [rel]];reflexivity.
+Defined.
+
+Instance semimeet_inverse : forall {r} {Hr: IsMeetSemiLattice r},
+IsJoinSemiLattice (semil_inverse r).
+Proof.
+intros;split.
+change (IsLatticeMag r). apply _.
+intros ? ?. apply Hr.
+Defined.
+
+Definition inverse_semimeet : forall {r}
+ {Hr : IsJoinSemiLattice (semil_inverse r)},
+IsMeetSemiLattice r.
+Proof.
+intros;split.
+change (IsLatticeMag (semil_inverse r)). apply _.
+intros ? ?;apply Hr.
+Defined.
+
+Instance semijoin_inverse : forall {r} {Hr: IsJoinSemiLattice r},
+IsMeetSemiLattice (semil_inverse r).
+Proof.
+intros. apply @inverse_semimeet.
+split. apply Hr.
+apply Hr.
+Defined.
+
+Definition inverse_semijoin : forall {r} 
+{Hr : IsMeetSemiLattice (semil_inverse r)},
+IsJoinSemiLattice r.
+Proof.
+intros. apply @semimeet_inverse in Hr.
+split;apply Hr.
+Defined.
+
+Instance semilattice_join_poset : forall {r} {Hr : IsJoinSemiLattice r},
+ IsPoset r.
+Proof.
+intros.
+apply inverse_P. apply _.
+change (IsPoset (semil_inverse r)).
+apply semilattice_meet_poset.
+Defined.
+
+Instance join_is_sup2 : forall {r : oMag}
+{Hs : IsHSet r} {Hp : relatorProp r} {Hr : IsJoinSemiLattice r},
+forall {x y : r}, IsSupremum r (doubleton x y) (gop x y).
+Proof.
+intros ? ? ? ?.
+intros.
+assert (Hr' : IsMeetSemiLattice (semil_inverse r)). apply _.
+apply inverse_issup_iff.
+apply (@meet_is_inf2 _ _ Hr').
+Defined.
+
+Section Order_to_join.
+
+Context {r : oMag} {Hset : IsHSet r} {Hpr : relatorProp r} {Hpo : IsPoset r}
+{Hjoin : forall a b : r, IsSupremum r (doubleton a b) (gop a b)}.
+
+Lemma join_gop_eq_pr : forall x y z : r, IsSupremum r (doubleton x y) z -> 
+gop x y = z.
+Proof.
+intros ? ? ?. apply supremum_unicity;apply _.
+Defined.
+
+Instance join_semilattice : IsJoinSemiLattice r.
+Proof.
+apply @inverse_semijoin.
+apply @meet_semilattice. apply _. apply _.
+intros. apply inverse_issup_iff. apply _.
+Defined.
+
+End Order_to_join.
+
+
+
+End Lattice_pr.
+
+
+Module Field_pr.
+Export Field Ring_pr Related_pr.
+
+Lemma field_intdom_pr : forall {F} {Hf : IsField F}, 
+forall a : F, ~ a = ZeroV -> forall b : F, ~ b = ZeroV -> ~ (a ° b) = ZeroV.
+Proof.
+intros ? ? ? Ha ? Hb H.
+assert (Ha' : ~ ~ (rrel a ZeroV)).
+  intro H'. apply Ha. apply apart_tight;assumption.
+
+destruct Ha'. intro Ha'.
+apply Hb.
+apply (@inverse_cancel (prering_mult F) _ a).
+apply finv. assumption.
+eapply concat. apply H.
+apply inverse. apply rmult_0_r.
+Defined.
+
+Instance field_is_intdom : forall {F} {Hf : IsField F}, IsIntegralDomain F.
+Proof.
+intros. apply (BuildIsIntegralDomain _ _).
+apply field_intdom_pr.
+red. apply irrefl_neq. apply field_neq.
+Defined.
+
+Instance field_left_cancel : forall {F} {Hf : IsField F}, 
+forall a : F, ~ a = ZeroV -> @Lcancel (prering_mult F) a.
+Proof.
+intros ? ? ? Ha.
+intros b c H.
+apply apart_tight. intro H'.
+assert (Ha' : ~ ~ (rrel a ZeroV)). intro Ha'.
+apply Ha. apply apart_tight. assumption.
+destruct Ha'.
+intros Ha'.
+eapply (@irrefl_neq F _). apply H'.
+eapply (@inverse_cancel (prering_mult F) _). apply finv. apply Ha'.
+assumption.
+Defined.
+
+Instance field_cancel : forall {F} {Hf : IsField F}, 
+forall a : F, ~ a = ZeroV -> @Cancel (prering_mult F) a.
+Proof.
+intros. apply left_cancel_cancel.
+apply field_left_cancel. assumption.
+Defined.
+
+Lemma field_inverse_apart : forall {F} {Hf : IsField F}, 
+forall (a b : F), @IsInverse (prering_mult F) a b -> rrel b ZeroV.
+Proof.
+intros. apply field_inv_back. exists a. apply inverse_symm. assumption.
+Defined.
+
+End Field_pr.
+
+
+
+
+
+
+
+
+
+
+
 

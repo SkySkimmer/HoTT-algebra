@@ -712,7 +712,7 @@ Canonical Structure plus_tag t := mult_tag t.
 
 Lemma ast2_pr_plus : forall {i j k : ctx} {t1 t2 : T2}
  (a1 : ast2 i j t1) (a2 : ast2 j k t2),
-        evalT2 (onth k) (Plus t1 t2) = @Some A (plus_tag (radd a1 a2)).
+        evalT2 (onth k) (Plus t1 t2) = @Some A (plus_tag (rplus a1 a2)).
 Proof.
 intros ? ? ? ? ? ? ?.
 change (somePlus (evalT2 (onth k) t1) (evalT2 (onth k) t2) =
@@ -724,7 +724,7 @@ Defined.
 
 Canonical Structure ast2_plus (i j k : ctx) (t1 t2 : T2)
  (a1 : ast2 i j t1) (a2 : ast2 j k t2) :=
-  Ast2 i k (Plus t1 t2) (plus_tag (radd a1 a2)) (prefix_trans _ _ _ a1 a2)
+  Ast2 i k (Plus t1 t2) (plus_tag (rplus a1 a2)) (prefix_trans _ _ _ a1 a2)
    (ast2_pr_plus a1 a2).
 
 Lemma ast2_pr_mult : forall {i j k : ctx} {t1 t2 : T2}

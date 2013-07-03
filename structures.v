@@ -235,14 +235,18 @@ order_refl :> IsReflexive R;
 order_antisymm :> IsAntisymmetric R
 }.
 
+Class IsStrictLinear (R : relator) := 
+ isstrictlinear : forall x y : R, rrel x y -> forall z,
+   minus1Trunc (rrel x z \/ rrel z y).
+
 Class IsCotransitive (R : relator) := 
- iscotrans : forall x y : R, rrel x y -> forall z,
-   minus1Trunc (rrel x z \/ rrel y z).
+ iscotrans :> IsStrictLinear R.
 
 Class IsApartness (R : relator) := BuildIsApartness {
 apart_irrefl :> IsIrreflexive R;
 apart_symm :> IsSymmetric R;
-apart_cotrans :> IsCotransitive R
+apart_cotrans :> IsCotransitive R;
+apart_tight : forall x y : R, ~ rrel x y -> x=y
 }.
 
 Class IsLinear (R : relator) := 
@@ -250,10 +254,6 @@ Class IsLinear (R : relator) :=
 
 Class IsConstrLinear (R : relator) := 
  isconstrlinear : forall x y : R, rrel x y \/ rrel y x.
-
-Class IsStrictLinear (R : relator) := 
- isstrictlinear : forall x y : R, rrel x y -> forall z,
-   minus1Trunc (rrel x z \/ rrel z y).
 
 Class IsConstrStrictLinear (R : relator) := isconstrstrictlinear
  : forall x y : R, rrel x y -> forall z,rrel x z \/ rrel z y.
@@ -442,6 +442,10 @@ isreg_right :> IsRRegular G a
 }.
 
 Class IsBinRegular (G : oMag) := isbinregular :> IsBinReflecting (@gop G).
+(*
+NB: in semirings, we expect that (a ° _) is morphism for <= forall a >= 0
+and embedding for < for a > 0
+*)
 
 End OrderedMagma.
 
@@ -467,14 +471,14 @@ BuildMagma (rcarr G) (raddC G).
 Canonical Structure prering_mult (G : prering) : magma :=
 BuildMagma (rcarr G) (rmultC G).
 
-Definition radd {G : prering} : law G := @gop (prering_add G).
+Definition rplus {G : prering} : law G := @gop (prering_add G).
 Definition rmult {G : prering} : law G := @gop (prering_mult G).
 
-Arguments radd {_} _ _ : simpl never.
+Arguments rplus {_} _ _ : simpl never.
 Arguments rmult {_} _ _ : simpl never.
 
-Infix "+" := (@radd _).
-Infix "°" := (@rmult _) (at level 40). (*level 40 is same as "*" *)
+Infix "+" := (@rplus _).
+Infix "°" := (@rmult _) (at level 40).
 
 Class Ldistributes (G : prering) := left_distributes : 
 forall a b c : G, a ° (b+c) = (a°b) + (a°c).
@@ -511,9 +515,17 @@ Definition Zero {G : semiring} : Identity (prering_add G) :=
  @gid (semiring_add_cmonoid G).
 Definition ZeroV {G : semiring} : prering_add G := Zero.
 
+Definition Zero' {G : prering} {Hg : IsSemiring G} : Identity (prering_add G)
+ := Zero.
+Definition ZeroV' {G : prering} {Hg : IsSemiring G} : prering_add G := Zero.
+
 Definition One {G : semiring} : Identity (prering_mult G) :=
  @gid (semiring_mult_monoid G).
 Definition OneV {G : semiring} : prering_mult G := One.
+
+Definition One' {G : prering} {Hg : IsSemiring G} : Identity (prering_mult G)
+ := One.
+Definition OneV' {G : prering} {Hg : IsSemiring G} : prering_mult G := One.
 
 Class IsRing (G : prering) := BuildIsRing {
 ring_is_semir :> IsSemiring G;
@@ -547,15 +559,18 @@ Definition ropp {G : ring} : forall x : G, @Inverse (prering_add G) x
 Definition ropp' {G : prering} {Hg : IsRing G} := @ropp (@is_ring_ring G _).
 
 Instance ropp_correct : forall (G : ring) x,
- @IsInverse (ring_group G) x (@ropp G x) := fun G => gopp_correct _.
+ @IsInverse (ring_group G) x (@ropp G x) := @ropp.
 
 Definition roppV {G : ring} : G -> G := fun x => @inverse_val _ _ (ropp x).
 Definition roppV' {G : prering} {Hg : IsRing G} : G -> G := roppV.
 
+Notation "x - y" := (rplus x (roppV y)).
+Notation "- x" := (roppV x).
+
 Class IsIntegralDomain (G : prering) := BuildIsIntegralDomain {
 integral_ring :> IsRing G;
-integral_pr :> forall a b : G, a ° b = ZeroV ->
-   minus1Trunc ((a = ZeroV) + (b = ZeroV));
+integral_pr :> forall a : G, ~ a = ZeroV -> forall b : G, ~ b = ZeroV ->
+   ~ a°b = ZeroV;
 intdom_neq :> ~ (@paths G OneV ZeroV)
 }.
 
@@ -563,6 +578,9 @@ Record integralDomain := BuildIntegralDomain {
 intdom_mag2 :> prering;
 intdom_is_intdom :> IsIntegralDomain intdom_mag2
 }.
+
+Class IsStrictIntegral (G : semiring) := isstrictintegral
+ : forall a b : G, a°b = ZeroV -> minus1Trunc (a=ZeroV \/ b=ZeroV).
 
 Canonical Structure is_intdom_intdom {G : prering} {Hsr : IsIntegralDomain G}
  : integralDomain := BuildIntegralDomain G Hsr.
@@ -575,6 +593,54 @@ fun G => BuildRing G _.
 Coercion intdom_ring : integralDomain >-> ring.
 
 End Ring.
+
+Module Lattice.
+Export Ring Related OrderedMagma.
+
+Class IsIdempotent (G : magma) := isidempotent :> forall x : G, gop x x = x.
+
+Class IsLatticeMag (G : magma) := BuildIsLatticeMag {
+lattice_mag_sg :> IsSemigroup G;
+lattice_mag_idem :> IsIdempotent G
+}.
+
+Class IsLatticeMeetR (G : oMag) :=
+ islatticemeet : forall x y : G, rrel x y <-> gop x y = x.
+Class IsLatticeJoinR (G : oMag) :=
+ islatticejoin : forall x y : G, rrel x y <-> gop y x = y.
+
+Class IsMeetSemiLattice (G : oMag) := BuildIsMeetSemiLattice {
+semilattice_meet_mag :> IsLatticeMag G;
+semilattice_meet_rel :> IsLatticeMeetR G
+}.
+
+Class IsJoinSemiLattice (G : oMag) := BuildIsJoinSemiLattice {
+semilattice_join_mag :> IsLatticeMag G;
+semilattice_join_rel :> IsLatticeJoinR G
+}.
+
+Record prelattice := BuildPreLattice {
+prelattice_t :> Type;
+prelattice_relC : Related.class prelattice_t;
+prelattice_meetC : Magma.class prelattice_t;
+prelattice_joinC : Magma.class prelattice_t
+}.
+
+Canonical Structure prelattice_rel (l : prelattice) : relator
+ := BuildRelator l (prelattice_relC l).
+Coercion prelattice_rel : prelattice >-> relator.
+
+Definition prelattice_meet (l : prelattice) : oMag
+ := BuildOMag l (prelattice_meetC l) (prelattice_relC l).
+Definition prelattice_join (l : prelattice) : oMag
+ := BuildOMag l (prelattice_joinC l) (prelattice_relC l).
+
+Class IsFullLattice (l : prelattice) := BuildIsLattice {
+islattice_meet :> IsMeetSemiLattice (prelattice_meet l);
+islattice_join :> IsJoinSemiLattice (prelattice_join l)
+}.
+
+End Lattice.
 
 Module Field.
 Export Ring.
@@ -600,8 +666,9 @@ field_is_apart :> IsApartness (prefield_relator F);
 field_is_ring :> IsRing F;
 field_add :> IsBinRegular (prefield_add F);
 field_mult :> IsBinRegular (prefield_mult F);
-field_neq : rrel ZeroV OneV;
-f_inv : forall x : F, rrel x ZeroV -> @Inverse (prering_mult F) x
+field_neq : rrel OneV ZeroV;
+f_inv : forall x : F, rrel x ZeroV -> @Inverse (prering_mult F) x;
+field_inv_back : forall x : F, @Inverse (prering_mult F) x -> rrel x ZeroV
 }.
 
 Record field := BuildField {
@@ -613,42 +680,69 @@ Existing Instance field_is_field.
 Canonical Structure is_field_field (F : prefield) {Hf : IsField F}
  := BuildField F Hf.
 
+Definition finv {F : field} : forall x : F, rrel x ZeroV ->
+ @Inverse (prering_mult F) x := f_inv.
+Definition finvV {F : field} : forall x : F, rrel x ZeroV -> prering_mult F
+ := finv.
+
+Definition finv' {F} {Hf : IsField F} : forall x : F, rrel x ZeroV ->
+ @Inverse (prering_mult F) x := finv.
+Definition finvV' {F} {Hf : IsField F} : forall x : F, rrel x ZeroV ->
+ (prering_mult F) := finv.
+
+
 End Field.
 
 
-
-Module Related_notation.
-Export Related.
+Module AlgebraNotation.
+Export Magma Related OrderedMagma Ring Field.
 (*                            WIP                               *)
 
-Class Order A := order : relation A.
-Infix "<=" := order.
+Class Le A := le : relation A.
+Infix "<=" := le.
+Class LeRel := lerel : relator.
+Instance getLe : forall {r : LeRel}, Le r := @rrel.
 
-Class OrderR := orderr : relator.
-Instance getOrder : forall {r : OrderR}, Order r := fun _ => rrel.
-
-Class SOrder A := sorder : relation A.
-Infix "<" := sorder.
-
-Class SOrderR := sorderr : relator.
-Instance getSOrder : forall {r : SOrderR}, SOrder r := fun _ => rrel.
+Class Lt A := lt : relation A.
+Infix "<" := lt.
+Class LtRel := ltrel : relator.
+Instance getLt : forall {r : LtRel}, Lt r := @rrel.
 
 Class Apart A := apart : relation A.
 Infix "#" := apart.
+Class ApartRel := apartrel : relator.
+Instance getApart : forall {r : ApartRel}, Apart r := @rrel.
 
-Class ApartR := apartr : relator.
-Instance getApart : forall {r : ApartR}, Apart r := fun _ => rrel.
+Class OrderRel2 := orderrel2 : relator2.
+Instance getLe2 : forall {r : OrderRel2}, Le r := @rrel2_1.
+Instance getLt2 : forall {r : OrderRel2}, Lt r := @rrel2_2.
 
-Class OrderR2 := orderr2 : relator2.
-Instance getOrder2_1 : forall {r : OrderR2}, Order r := fun _ => rrel2_1.
-Instance getOrder2_2 : forall {r : OrderR2}, SOrder r := fun _ => rrel2_2.
+Class Adder A := adder : law A.
+Infix "+" := adder.
+Class AdderMag := addermag : magma.
+Instance getAdderMag : forall {G : AdderMag}, Adder G := @gop.
+
+Class Multer A := multer : law A.
+Infix "°" := multer (at level 40). (*level 40 is same as "*" *)
+Class MulterMag := multermag : magma.
+Instance getMulterMag : forall {G : MulterMag}, Multer G := @gop.
+
+Instance getAdderRPlus : forall {G : prering}, Adder G := @rplus.
+Instance getMulterRMult : forall {G : prering}, Multer G := @rmult.
+
+Ltac unfoldNota := unfold le,lt,apart,adder,multer;
+  unfold getLe,getLt,getApart,getLe2,getLt2,getAdderMag,getMulterMag,
+  getAdderRPlus,getMulterRMult.
 
 (***********  Testing  ******************)
-Lemma bb : (forall r : ApartR, forall x y : r, rrel x y). Abort.
+Lemma blob : forall r : prering, forall x y : r, rmult x y = multer x y.
+reflexivity. Defined.
+Lemma bb0 : (forall r : ApartRel, forall x y : r, rrel x y). Abort.
+Lemma bb : forall r : relator, forall x y : r, rrel x y. Abort.
 Fail Lemma bb : (forall r : relator, forall x y : r, x # y).
 Fail Lemma bb : (forall r : ApartR, forall x y, x < y).
-Lemma bb : forall r : OrderR2, forall x y, x < y -> x <= y. Abort.
+Lemma bb : forall r : OrderRel2, forall x y, x < y -> x <= y. Abort.
 Lemma test : forall r : relator2, forall x y : r, rrel2_1 x y.
-intros. change OrderR2 in r. change (x <= y). Abort.
+intros. change OrderRel2 in r. change (x <= y). Abort.
 
-End Related_notation.
+End AlgebraNotation.
