@@ -1,4 +1,4 @@
-Require Import HoTT FunextAxiom UnivalenceAxiom.
+Require Import Overture HSet HProp PathGroupoids FunextAxiom UnivalenceAxiom.
 
 Open Local Scope path_scope.
 
@@ -43,7 +43,7 @@ End Quotient.
 Section Equiv.
 
 Context {A : Type} {R : relation A}
- {Htrans : Transitive R} {Hsymm : Symmetric R}
+ {Htrans : Transitive R} {Hsymm : Symmetric R} {Hrefl : Reflexive R}
 {Hprop : forall x y, IsHProp (R x y)}.
 
 Definition quotient_ind : forall P : quotient R -> Type, 
@@ -69,8 +69,6 @@ apply univalence_axiom. apply equiv_iff_hprop.
 intros. eauto.
 intros. eauto.
 Defined.
-
-Context {Hrefl : Reflexive R}.
 
 Lemma in_class_pr : forall x, in_class (class_of _ x) = R x.
 Proof.

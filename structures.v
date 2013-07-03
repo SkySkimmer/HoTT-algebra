@@ -1,5 +1,5 @@
 
-Require Import HoTT.
+Require Import Overture.
 Require Import hit.minus1Trunc.
 
 Open Scope path_scope.
