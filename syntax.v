@@ -509,7 +509,7 @@ Inductive T2 : Type :=
   | Val2 : nat -> T2
 .
 
-Definition somePlus {A : prering} : law (option A) := @someOp (prering_add _).
+Definition somePlus {A : prering} : law (option A) := @someOp (prering_plus _).
 Definition someMult {A : prering} : law (option A) := @someOp (prering_mult _).
 
 Fixpoint evalT2 {A : prering} (f : _ -> option A) (t : T2) : option A :=
@@ -525,7 +525,7 @@ Notation FPlus := (@Op (NEList nat)).
 Notation ValL  := (@Val (NEList nat)).
 
 Definition evalFlat2 {A : prering} (f : nat -> option A) (t : Flat2)
- : option A := @evalTree (prering_add A) _ (fun l => @evalNE (prering_mult A) _ f l) t.
+ : option A := @evalTree (prering_plus A) _ (fun l => @evalNE (prering_mult A) _ f l) t.
 
 (* eval (distribute t1 t2) = (eval t1) * (eval t2) *)
 Fixpoint distribute (t1 : Flat2) : Flat2 -> Flat2 := fix f (t2 : Flat2) :=
@@ -552,7 +552,7 @@ Section Mag2.
 Notation onth := nth_error.
 
 Context {A : prering}
- {Hadd : IsSemigroup (prering_add A)} {Hmult : IsSemigroup (prering_mult A)}
+ {Hadd : IsSemigroup (prering_plus A)} {Hmult : IsSemigroup (prering_mult A)}
  {Hdistrib : Distributes A}.
 
 Lemma some_distrib_right : forall a b c : option A, 
@@ -770,20 +770,20 @@ Definition full_simplify (t : T2) :=
 Lemma ast2_full_semiring : forall {Hsemir : IsSemiring A}, 
 forall {i j : ctx} {t1 t2 : T2}
  (f1 : ast2 [] i t1) (f2 : ast2 i j t2), 
-  @evalNE (prering_add A) _ (fun l => @evalNE (prering_mult A) _ (onth j) l)
+  @evalNE (prering_plus A) _ (fun l => @evalNE (prering_mult A) _ (onth j) l)
      (full_simplify t1) =
-  @evalNE (prering_add A) _ (fun l => @evalNE (prering_mult A) _ (onth j) l)
+  @evalNE (prering_plus A) _ (fun l => @evalNE (prering_mult A) _ (onth j) l)
      (full_simplify t2)
   -> untag (val2 f1) = untag (val2 f2).
 Proof.
 intros ? ? ? ? ? ? ? H.
 apply ast2_semiring.
 unfold evalFlat2.
-apply (@sort_inj (prering_add A) _ _ NEList_nat_order_dec).
+apply (@sort_inj (prering_plus A) _ _ NEList_nat_order_dec).
 exact H.
 Defined.
 
-Context {Hadd : IsSemigroup (prering_add A)} {Hmult : IsSemigroup (prering_mult A)}
+Context {Hadd : IsSemigroup (prering_plus A)} {Hmult : IsSemigroup (prering_mult A)}
  {Hdistrib : Distributes A}.
 
 Lemma ast2_use : forall {i j : ctx} {t1 t2 : T2}

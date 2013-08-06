@@ -41,8 +41,6 @@ match G with | BuildMagma _ l => l end.
 
 Arguments gop {G} _ _ : simpl never.
 
-Canonical Structure BuildMagma_canon := fun g l => BuildMagma g l.
-
 (*********** PRERING ******************)
 
 Record preringClass (T : Type) := BuildPreringC {
@@ -90,8 +88,6 @@ Definition rrel {R : Relation} : relation R :=
 match R with | BuildRelation _ r => r end.
 
 Arguments rrel {_} _ _ : simpl never.
-
-Canonical Structure BuildRelation_canon := fun T r => BuildRelation T r.
 
 (*
 Axiom blob : forall R : Relation, forall x y : R, rrel x y.
@@ -588,26 +584,27 @@ Export Magma.
 Export Related.
 
 Class IsLInvariant (G : LR_sig)
- := islcompat :> forall z : G, IsMorphism (gop z).
+ := islcompat :> forall z : G, IsMorphism ((gop z):G->G).
 Class IsRInvariant (G : LR_sig)
- := isrcompat :> forall z : G, IsMorphism (fun a : G => gop a z).
+ := isrcompat :> forall z : G, IsMorphism ((fun a : G => gop a z):G->G).
 Class IsInvariant (G : LR_sig) := BuildIsInvariant {
 invariant_left :> IsLInvariant G;
 invariant_right :> IsRInvariant G
 }.
 
-Class IsCompat (G : LR_sig) := iscompat :> IsBinMorphism (@gop G).
+Class IsCompat (G : LR_sig) := iscompat :> IsBinMorphism ((@gop G):law G).
 
 Class IsLRegular (G : LR_sig) (a : G) :=
- islregular :> IsReflecting (gop a).
+ islregular :> IsReflecting ((gop a):G->G).
 Class IsRRegular (G : LR_sig) (a : G) :=
- isrregular :> IsReflecting (fun b : G => gop b a).
+ isrregular :> IsReflecting ((fun b : G => gop b a):G->G).
 Class IsRegular (G : LR_sig) (a : G) := BuildIsRegular {
 isreg_left :> IsLRegular G a;
 isreg_right :> IsRRegular G a
 }.
 
-Class IsBinRegular (G : LR_sig) := isbinregular :> IsBinReflecting (@gop G).
+Class IsBinRegular (G : LR_sig) :=
+ isbinregular :> IsBinReflecting ((@gop G):law G).
 (*
 NB: in semirings, we expect that (a ° _) is morphism for <= forall a >= 0
 and embedding for < for a > 0

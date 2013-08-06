@@ -29,41 +29,23 @@ apply @trunc_arrow. exact _.
 apply trunc_arrow.
 Defined.
 
-Definition magma_sigma : sigT class <~> magma.
-Proof.
-issig BuildMagma gcarr gclass.
-Defined.
-
 Definition magma_sig : sigT law <~> magma.
 Proof.
-pose (f := fun G : sigT law => easyMagma (G .1) (G .2)).
-pose (finv := fun G : magma => existT law G (@gop G)).
-pose (Hsec := fun G : sigT law => match G as G' return finv (f G') = G' with
-  | existT g m => idpath end).
-pose (Hinv := fun G : magma => match G as G' return f (finv G') = G' with
-  | BuildMagma g (BuildClass m) => idpath end).
-apply BuildEquiv with f. apply BuildIsEquiv with finv Hinv Hsec.
-
-intros G. unfold Hinv;unfold Hsec;clear Hinv Hsec.
-destruct G. simpl. reflexivity.
+issig BuildMagma gcarr glaw.
 Defined.
 
 Instance assoc_prop : forall {G : magma} {Hset : IsHSet G},
  IsHProp (Associative G).
 Proof.
 intros.
-apply hprop_forall. intro;apply hprop_forall. intro;apply hprop_forall.
-intro.
-apply hprop_allpath. apply Hset.
+apply trunc_forall.
 Defined.
 
 Instance comm_prop : forall {G : magma} {Hset : IsHSet G},
  IsHProp (Commutative G).
 Proof.
 intros.
-apply hprop_forall. intro;apply hprop_forall.
-intro.
-apply hprop_allpath. apply Hset.
+apply trunc_forall.
 Defined.
 
 Instance issg_prop : forall {G : magma} {Hset : IsHSet G},
@@ -91,13 +73,8 @@ apply (@trunc_equiv' (sigT (fun _ : Left_id e => Right_id e))).
 issig (BuildIsId G e) (@id_left G e) (@id_right G e).
 
 apply @trunc_sigma.
-apply @hprop_forall. exact _. intros.
-apply hprop_allpath.
-apply Hset.
-intro H;clear H.
-apply @hprop_forall. exact _. intros.
-apply hprop_allpath.
-apply Hset.
+apply trunc_forall.
+intros;apply trunc_forall.
 Defined.
 
 Lemma left_id_id : forall {G : semigroup} {e : G}, Left_id e -> IsId e.
@@ -165,10 +142,7 @@ Proof.
 intros.
 apply (@trunc_equiv' (sigT (fun _ : Lcancel a => Rcancel a))).
 issig (BuildCancel _ a) (@Left_cancel _ a) (@Right_cancel _ a).
-apply @trunc_sigma;[|intro C;clear C];
-repeat (apply @hprop_forall;[ exact _ | intros]);
-apply hprop_allpath;
-apply Hset.
+apply @trunc_sigma;[|intro C;clear C];apply trunc_forall.
 Defined.
 
 Instance iscmono_prop : forall {G : magma} {Hset : IsHSet G},
@@ -316,7 +290,7 @@ Defined.
 Instance gid_isinverse : forall G : monoid, @IsInverse G gid gid.
 Proof.
 intros.
-split;red;(apply transport with gidV;[symmetry;apply gid_id|]);apply _.
+split;red;(apply transport with gidV;[symmetry;apply gid|]);apply _.
 Defined.
 
 Lemma gopp_gid : forall G : group, @paths G (gopp gid) gid.
@@ -374,7 +348,7 @@ Instance gopp_prop : forall (G : monoid) {Hset : IsHSet G},
  IsHProp (forall x : G, Inverse x).
 Proof.
 intros.
-apply hprop_forall. apply _.
+apply trunc_forall.
 Defined.
 
 Definition isgroup_sig : forall G : magma, 
@@ -398,25 +372,25 @@ Module Related_pr.
 Export Related.
 Import minus1Trunc.
 
-Instance istrans_prop : forall {r : relator}
+Instance istrans_prop : forall {r : Relation}
  {Hprop : forall x y : r, IsHProp (rrel x y)}, IsHProp (IsTransitive r).
 Proof.
 intros.
-repeat (apply hprop_forall;intro). apply _.
+apply trunc_forall.
 Defined.
 
-Instance isrefl_prop : forall {r : relator}
+Instance isrefl_prop : forall {r : Relation}
  {Hprop : forall x y : r, IsHProp (rrel x y)}, IsHProp (IsReflexive r).
 Proof.
 intros.
-repeat (apply hprop_forall;intro). apply _.
+apply trunc_forall.
 Defined.
 
-Instance issymm_prop : forall {r : relator}
+Instance issymm_prop : forall {r : Relation}
  {Hprop : forall x y : r, IsHProp (rrel x y)}, IsHProp (IsSymmetric r).
 Proof.
 intros.
-repeat (apply hprop_forall;intro). apply _.
+apply trunc_forall.
 Defined.
 
 Definition IsEquivalence_sig : forall r, 
@@ -427,7 +401,7 @@ intro r. issig (BuildIsEquivalence r) (@equivalence_refl r) (@equivalence_symm r
   (@equivalence_trans r).
 Defined.
 
-Instance isequivalence_prop : forall {r : relator}
+Instance isequivalence_prop : forall {r : Relation}
  {Hprop : forall x y : r, IsHProp (rrel x y)}, IsHProp (IsEquivalence r).
 Proof.
 intros.
@@ -444,17 +418,17 @@ Proof.
 intros ? ? ? ? ?. intros H. destruct H. apply Hr with x. assumption.
 Defined.
 
-Instance isantisymm_prop : forall {r : relator} {Hset : IsHSet r},
+Instance isantisymm_prop : forall {r : Relation} {Hset : IsHSet r},
  IsHProp (IsAntisymmetric r).
 Proof.
 intros.
-repeat (apply hprop_forall;intro). apply hprop_allpath;apply Hset.
+apply trunc_forall.
 Defined.
 
 Instance isirrefl_prop : forall {r}, IsHProp (IsIrreflexive r).
 Proof.
 intros.
-repeat (apply hprop_forall;intro). apply _.
+apply trunc_forall.
 Defined.
 
 Definition isposet_sig : forall r, sigT (fun _ : IsTransitive r => 
@@ -464,7 +438,7 @@ intro r;
 issig (BuildIsPoset r) (@order_trans r) (@order_refl r) (@order_antisymm r).
 Defined.
 
-Instance isposet_prop : forall {r : relator} {Hset : IsHSet r}
+Instance isposet_prop : forall {r : Relation} {Hset : IsHSet r}
  {Hprop : forall x y : r, IsHProp (rrel x y)}, IsHProp (IsPoset r).
 Proof.
 intros.
@@ -478,7 +452,7 @@ Defined.
 Instance iscotrans_prop : forall {r}, IsHProp (IsCotransitive r).
 Proof.
 intros.
-repeat (apply hprop_forall;intro). apply minus1Trunc_is_prop.
+apply trunc_forall.
 Defined.
 
 Definition isapart_sig : forall r, sigT (fun _ : IsIrreflexive r =>
@@ -490,7 +464,7 @@ issig (BuildIsApartness r) (@apart_irrefl r) (@apart_symm r) (@apart_cotrans r)
   (@apart_tight r).
 Defined.
 
-Instance isapart_prop : forall {r : relator}
+Instance isapart_prop : forall {r : Relation}
  {Hpr : IsMereRelator r}, IsHProp (IsApartness r).
 Proof.
 intros;eapply trunc_equiv'.
@@ -498,17 +472,17 @@ apply isapart_sig.
 apply @trunc_sigma. apply _.
 intro. apply @trunc_sigma. apply _.
 intro. apply @trunc_sigma. apply _.
-intro. repeat (apply hprop_forall;intro). apply hprop_allpath. apply Hpr.
+intro. apply trunc_forall.
 Defined.
 
-Lemma apart_prove_empty : forall {r : relator} {Ha : IsApartness r}, 
+Lemma apart_prove_empty : forall {r : Relation} {Ha : IsApartness r}, 
 forall x y : r, (rrel x y -> Empty) -> (~x=y -> Empty).
 Proof.
 intros ? ? ? ? ? H.
 apply H. apply apart_tight. assumption.
 Defined.
 
-Lemma apart_prove_eq : forall {r : relator} {Ha : IsApartness r}, 
+Lemma apart_prove_eq : forall {r : Relation} {Ha : IsApartness r}, 
 forall a b x y : r, (rrel x y -> a=b) -> (~x=y -> a=b).
 Proof.
 intros ? ? ? ? ? ? H H'.
@@ -521,7 +495,8 @@ Defined.
 
 Instance islinear_prop : forall {r}, IsHProp (IsLinear r).
 Proof.
-intro. repeat (apply hprop_forall;intro). apply minus1Trunc_is_prop.
+intro.
+apply trunc_forall.
 Defined.
 
 Definition isstrictposet_sig : forall r, sigT (fun _ : IsIrreflexive r => 
@@ -531,7 +506,7 @@ intros. issig (BuildIsStrictPoset r) (@strictposet_irrefl r)
   (@strictposet_trans r).
 Defined.
 
-Instance isstrictposet_prop : forall {r : relator}
+Instance isstrictposet_prop : forall {r : Relation}
  {Hp : forall x y : r, IsHProp (rrel x y)}, IsHProp (IsStrictPoset r).
 Proof.
 intros. eapply trunc_equiv'.
@@ -539,14 +514,14 @@ apply isstrictposet_sig.
 apply @trunc_sigma. apply _. intros;apply _.
 Defined.
 
-Lemma strict_poset_antisymm : forall (r : relator) {Hstrict : IsStrictPoset r}, 
+Lemma strict_poset_antisymm : forall (r : Relation) {Hstrict : IsStrictPoset r}, 
 forall x y : r, rrel x y -> rrel y x -> Empty.
 Proof.
 intros. destruct Hstrict as [Hirr Htrans].
 apply Hirr with x;eauto.
 Defined.
 
-Instance strict_poset_disjunct_prop : forall (r : relator)
+Instance strict_poset_disjunct_prop : forall (r : Relation)
  {Hp : forall x y : r, IsHProp (rrel x y)}
  {Hstrict : IsStrictPoset r}, forall x y : r, 
   IsHProp (rrel x y \/ rrel y x).
@@ -557,42 +532,42 @@ destruct (strict_poset_antisymm _ _ _ Hx Hy).
 destruct (strict_poset_antisymm _ _ _ Hx Hy).
 Defined.
 
-Lemma poset2_lt_le : forall {r : relator2} {Hpo : IsPoset2 r} (x y : r), 
-rrel2_2 x y -> rrel2_1 x y.
+Lemma poset2_lt_le : forall {r : RR_sig} {Hpo : IsPoset2 r} (x y : r), 
+RR_R2 x y -> RR_R1 x y.
 Proof.
 intros. apply poset2_tight. red. apply strict_poset_antisymm.
 apply _. assumption.
 Defined.
 
-Lemma poset2_linear_le_lt_trans : forall {r : relator2} 
-{Hpr : relatorProp (relator2_2 r)}
+Lemma poset2_linear_le_lt_trans : forall {r : RR_sig} 
+{Hpr : RelationProp (RR_to_R2 r)}
 {Hpo : IsPoset2 r}
-{Hlin : IsStrictLinear (relator2_2 r)}, 
-forall x y : r, rrel2_1 x y -> forall z, rrel2_2 y z -> rrel2_2 x z.
+{Hlin : IsStrictLinear (RR_to_R2 r)}, 
+forall x y : r, RR_R1 x y -> forall z, RR_R2 y z -> RR_R2 x z.
 Proof.
 intros ? ? ? ? ? ? H ? H'.
 eapply minus1Trunc_rect_nondep;[|apply Hpr|apply Hlin;apply H'].
-intros [H0|H0];[|apply H0]. fold (@rrel2_2 r) in H0.
+intros [H0|H0];[|apply H0]. fold (@RR_to_R2 r) in H0.
 apply poset2_tight in H. destruct H;assumption.
 Defined.
 
-Lemma poset2_linear_lt_le_trans : forall {r : relator2}
-{Hpr : relatorProp (relator2_2 r)}
+Lemma poset2_linear_lt_le_trans : forall {r : RR_sig}
+{Hpr : RelationProp (RR_to_R2 r)}
 {Hpo : IsPoset2 r}
-{Hlin : IsStrictLinear (relator2_2 r)}, 
-forall x y : r, rrel2_2 x y -> forall z, rrel2_1 y z -> rrel2_2 x z.
+{Hlin : IsStrictLinear (RR_to_R2 r)}, 
+forall x y : r, RR_R2 x y -> forall z, RR_R1 y z -> RR_R2 x z.
 Proof.
 intros ? ? ? ? ? ? H ? H'.
 eapply minus1Trunc_rect_nondep;[|apply Hpr|apply Hlin;apply H].
-intros [H0|H0];[apply H0|]. fold (@rrel2_2 r) in H0.
+intros [H0|H0];[apply H0|]. fold (@RR_to_R2 r) in H0.
 apply poset2_tight in H'. destruct H';assumption.
 Defined.
 
-Lemma apart_from_strict_poset : forall (r : relator2)
-{Hstrict : IsStrictPoset (relator2_2 r)} {Hlin : IsStrictLinear (relator2_2 r)},
-(forall x y : r, rrel2_1 x y <-> (rrel2_2 x y \/ rrel2_2 y x)) ->
-(forall x y : r, ~ rrel2_1 x y -> x=y) ->
-IsApartness (relator2_1 r).
+Lemma apart_from_strict_poset : forall (r : RR_sig)
+{Hstrict : IsStrictPoset (RR_to_R2 r)} {Hlin : IsStrictLinear (RR_to_R2 r)},
+(forall x y : r, RR_R1 x y <-> (RR_R2 x y \/ RR_R2 y x)) ->
+(forall x y : r, ~ RR_R1 x y -> x=y) ->
+IsApartness (RR_to_R1 r).
 Proof.
 intros ? ? ? H ?;split.
 - intros x Hx.
@@ -607,21 +582,21 @@ intros ? ? ? H ?;split.
 - assumption.
 Defined.
 
-Lemma neq_irrefl : forall r : relator, (forall x y : r, rrel x y -> ~ x=y) -> 
+Lemma neq_irrefl : forall r : Relation, (forall x y : r, rrel x y -> ~ x=y) -> 
 IsIrreflexive r.
 Proof.
 intros ? H0;intros x H.
 apply H0 in H. apply H;reflexivity.
 Defined.
 
-Lemma neq_symm : forall r : relator, (forall x y : r, rrel x y <-> ~x=y) -> 
+Lemma neq_symm : forall r : Relation, (forall x y : r, rrel x y <-> ~x=y) -> 
 IsSymmetric r.
 Proof.
 red;red;intros ? H ? ? H'.
 apply H. apply H in H'. intro H0;apply H';symmetry;assumption.
 Defined.
 
-Lemma neq_cotrans : forall r : relator, decidable_paths r ->
+Lemma neq_cotrans : forall r : Relation, decidable_paths r ->
 (forall x y : r, rrel x y <-> ~x=y) -> IsCotransitive r.
 Proof.
 intros ? Hdec Hneq x y H z.
@@ -630,7 +605,7 @@ destruct (Hdec x z) as [[]|H']. right. assumption.
 left;auto;apply Hneq;auto.
 Defined.
 
-Lemma neq_apart : forall r : relator, decidable_paths r ->
+Lemma neq_apart : forall r : Relation, decidable_paths r ->
 (forall x y : r, rrel x y <-> ~x=y) -> IsApartness r.
 Proof.
 intros ? Hdec Hneq;split.
@@ -698,18 +673,20 @@ Proof.
 intros ? ? m. exists (minimum_val m). apply minimum_is_infimum;apply _.
 Defined.
 
-Instance upper_prop : forall (r : relator)
+Instance upper_prop : forall (r : Relation)
  {Hp : forall x y : r, IsHProp (rrel x y)},
 forall P m, IsHProp (IsUpper r P m).
 Proof.
-intros. repeat (apply hprop_forall;intros);apply _.
+intros.
+apply trunc_forall.
 Defined.
 
-Instance lower_prop : forall (r : relator)
+Instance lower_prop : forall (r : Relation)
  {Hp : forall x y : r, IsHProp (rrel x y)},
 forall P m, IsHProp (IsLower r P m).
 Proof.
-intros. repeat (apply hprop_forall;intros);apply _.
+intros.
+apply trunc_forall.
 Defined.
 
 Definition ismax_sig : forall r P m, sigT (fun _ : IsUpper r P m => 
@@ -726,7 +703,7 @@ intros. issig (BuildIsMinimum r P m) (@minimum_lower r P m)
  (@minimum_verifies r P m).
 Defined.
 
-Instance ismaximum_prop : forall (r : relator)
+Instance ismaximum_prop : forall (r : Relation)
  {Hp : forall x y : r, IsHProp (rrel x y)} P {Hp' : forall x, IsHProp (P x)}  m, 
 IsHProp (IsMaximum r P m).
 Proof.
@@ -734,7 +711,7 @@ intros;eapply trunc_equiv'. apply ismax_sig.
 apply trunc_sigma.
 Defined.
 
-Instance isminimum_prop : forall (r : relator)
+Instance isminimum_prop : forall (r : Relation)
  {Hp : forall x y : r, IsHProp (rrel x y)} P {Hp' : forall x, IsHProp (P x)}  m, 
 IsHProp (IsMinimum r P m).
 Proof.
@@ -742,14 +719,14 @@ intros;eapply trunc_equiv'. apply ismin_sig.
 apply trunc_sigma.
 Defined.
 
-Instance issupremum_prop : forall (r : relator)
+Instance issupremum_prop : forall (r : Relation)
  {Hp : forall x y : r, IsHProp (rrel x y)},
 forall P m, IsHProp (IsSupremum r P m).
 Proof.
 intros. apply isminimum_prop;apply _.
 Defined.
 
-Instance isinfimum_prop : forall (r : relator)
+Instance isinfimum_prop : forall (r : Relation)
  {Hp : forall x y : r, IsHProp (rrel x y)},
 forall P m, IsHProp (IsInfimum r P m).
 Proof.
@@ -810,7 +787,7 @@ intros. issig (BuildIsLattice r) (@lattice_is_poset r) (@lattice_has_sup2 r)
   (@lattice_has_inf2 r).
 Defined.
 
-Instance islattice_prop : forall (r : relator)
+Instance islattice_prop : forall (r : Relation)
 {Hset : IsHSet r} {Hp : forall x y : r, IsHProp (rrel x y)}, 
 IsHProp (IsLattice r).
 Proof.
@@ -845,7 +822,7 @@ intros. apply funext_axiom.
 intro x;apply univalence_axiom. apply doubleton_comm_equiv.
 Defined.
 
-Lemma total_order_max2 : forall {r : relator} {Hset : IsHSet r}
+Lemma total_order_max2 : forall {r : Relation} {Hset : IsHSet r}
 {Hpr : forall x y : r, IsHProp (rrel x y)} {Hto : IsTotalOrder r},
 forall a b, Maximum2 r a b.
 Proof.
@@ -862,7 +839,7 @@ intros [H|H].
 - intros;apply minus1Trunc_is_prop.
 Defined.
 
-Lemma total_order_min2 : forall {r : relator} {Hset : IsHSet r}
+Lemma total_order_min2 : forall {r : Relation} {Hset : IsHSet r}
 {Hpr : forall x y : r, IsHProp (rrel x y)} {Hto : IsTotalOrder r},
 forall a b, Minimum2 r a b.
 Proof.
@@ -879,7 +856,7 @@ intros [H|H].
 - intros;apply minus1Trunc_is_prop.
 Defined.
 
-Instance total_order_lattice : forall {r : relator} {Hset : IsHSet r}
+Instance total_order_lattice : forall {r : Relation} {Hset : IsHSet r}
 {Hpr : forall x y : r, IsHProp (rrel x y)}
 {Hto : IsTotalOrder r}, IsLattice r.
 Proof.
@@ -895,7 +872,7 @@ Definition is_inter {T : Type} (P1 P2 P' : T -> Type) :=
 
 Definition singleton {T : Type} (x : T) := doubleton x x.
 
-Instance singleton_min : forall {r : relator} {Hpr : relatorProp r}
+Instance singleton_min : forall {r : Relation} {Hpr : RelationProp r}
  {Hr : IsReflexive r} x, IsMinimum r (singleton x) x.
 Proof.
 intros. split.
@@ -917,7 +894,7 @@ Defined.
 
 Section UnionInterSec.
 
-Context {r : relator} {Hset : IsHSet r} {Hpr : relatorProp r}
+Context {r : Relation} {Hset : IsHSet r} {Hpr : RelationProp r}
 {Hpo : IsPoset r}
 {P1 P2 P' : r -> Type}
 {Hp1 : forall x, IsHProp (P1 x)} {Hp2 : forall x, IsHProp (P2 x)}
@@ -1013,7 +990,7 @@ End Related_pr.
 Module OMag_pr.
 Export OrderedMagma Magma_pr Related_pr.
 
-Lemma invariant_compat : forall (G : oMag) {Htrans : IsTransitive G},
+Lemma invariant_compat : forall (G : LR_sig) {Htrans : IsTransitive G},
  IsInvariant G -> IsCompat G.
 Proof.
 red;intros ? ? Hinv ? ? X ? ? Y.
@@ -1021,7 +998,7 @@ apply Htrans with (gop x y');[apply invariant_left | apply invariant_right];
 assumption.
 Defined.
 
-Instance compat_linvariant : forall (G : oMag) {Hrefl : IsReflexive G}, 
+Instance compat_linvariant : forall (G : LR_sig) {Hrefl : IsReflexive G}, 
 IsCompat G -> IsLInvariant G.
 Proof.
 red;intros ? ? Hc ? ? ? ?.
@@ -1029,7 +1006,7 @@ apply Hc. apply Hrefl.
 assumption.
 Defined.
 
-Instance compat_rinvariant : forall (G : oMag) {Hrefl : IsReflexive G}, 
+Instance compat_rinvariant : forall (G : LR_sig) {Hrefl : IsReflexive G}, 
 IsCompat G -> IsRInvariant G.
 Proof.
 red;intros ? ? Hc ? ? ? ?.
@@ -1037,30 +1014,30 @@ apply Hc. assumption.
 apply Hrefl.
 Defined.
 
-Instance linvariant_prop : forall (G : oMag)
+Instance linvariant_prop : forall (G : LR_sig)
  {Hprop : forall x y : G, IsHProp (rrel x y)}, IsHProp (IsLInvariant G).
 Proof.
-intros. 
-repeat (apply hprop_forall;intro).
-apply _.
+intros.
+apply @trunc_forall. apply _.
+intro. apply trunc_forall.
 Defined.
 
-Instance rinvariant_prop : forall (G : oMag)
+Instance rinvariant_prop : forall (G : LR_sig)
  {Hprop : forall x y : G, IsHProp (rrel x y)}, IsHProp (IsRInvariant G).
 Proof.
-intros. 
-repeat (apply hprop_forall;intro).
-apply _.
+intros.
+apply @trunc_forall. apply _.
+intro. apply trunc_forall.
 Defined.
 
-Definition invariant_sig : forall G : oMag, 
+Definition invariant_sig : forall G : LR_sig, 
 sigT (fun _ : IsLInvariant G => IsRInvariant G) <~> IsInvariant G.
 Proof.
 intros.
 issig (BuildIsInvariant G) (@invariant_left G) (@invariant_right G).
 Defined.
 
-Instance invariant_prop : forall (G : oMag)
+Instance invariant_prop : forall (G : LR_sig)
  {Hprop : forall x y : G, IsHProp (rrel x y)}, IsHProp (IsInvariant G).
 Proof.
 intros;eapply trunc_equiv'.
@@ -1069,15 +1046,14 @@ apply @trunc_sigma. apply _.
 intro; apply _.
 Defined.
 
-Instance compat_prop : forall (G : oMag)
+Instance compat_prop : forall (G : LR_sig)
  {Hprop : forall x y : G, IsHProp (rrel x y)}, IsHProp (IsCompat G).
 Proof.
 intros.
-repeat (apply hprop_forall;intro).
-apply _.
+apply trunc_forall.
 Defined.
 
-Lemma rinverse_lregular : forall {G : oMag} {Hassoc : Associative G}
+Lemma rinverse_lregular : forall {G : LR_sig} {Hassoc : Associative G}
 {Hcompat : IsLInvariant G}
 (x y : G) {Hinv : Rinverse x y}, IsLRegular G x.
 Proof.
@@ -1089,7 +1065,7 @@ path_via (gop (gop y x) a). apply Hinv.
 apply Hcompat. assumption.
 Defined.
 
-Lemma linverse_rregular : forall {G : oMag} {Hassoc : Associative G}
+Lemma linverse_rregular : forall {G : LR_sig} {Hassoc : Associative G}
 {Hcompat : IsRInvariant G}
 (x y : G) {Hinv : Linverse x y}, IsRRegular G x.
 Proof.
@@ -1101,7 +1077,7 @@ path_via (gop a (gop x y)). apply Hinv.
 apply Hcompat. assumption.
 Defined.
 
-Lemma inverse_regular : forall (G : oMag) {Hassoc : Associative G}
+Lemma inverse_regular : forall (G : LR_sig) {Hassoc : Associative G}
 {Hcompat : IsInvariant G}
 (x y : G) {Hinv : IsInverse x y}, IsRegular G x.
 Proof.
@@ -1114,27 +1090,29 @@ Module Ring_pr.
 Export Ring Magma_pr.
 Import minus1Trunc.
 
-Definition prering_sigma : sigT (fun carr => sigT (fun _ : Magma.class carr => 
-  Magma.class carr)) <~> prering.
+(*
+LATER
+Definition prering_sig : sigT (fun carr => sigT (fun _ : law carr => 
+  law carr)) <~> prering.
 Proof.
-issig BuildPrering rcarr raddC rmultC.
+issig (fun g l1 l2 => BuildPrering g (BuildPreringC _ l1 l2))
+ rigcarr (fun g => prering_plusV _ (rigC g)) (fun g => prering_multV _ (rigC g)).
 Defined.
+*)
 
 Instance distrib_prop : forall {G : prering} {Hset : IsHSet G},
  IsHProp (Distributes G).
 Proof.
 intros. apply (@trunc_equiv' (sigT (fun _ : Ldistributes G => Rdistributes G))).
 issig (BuildDistributes G) (@distrib_left G) (@distrib_right G).
-apply @trunc_sigma;[|intro C;clear C];
-repeat (apply hprop_forall;intro);
-apply hprop_allpath; apply Hset.
+apply @trunc_sigma;[|intro C;clear C];apply trunc_forall.
 Defined.
 
 Instance issemir_prop : forall {G : prering} {Hset : IsHSet G},
  IsHProp (IsSemiring G).
 Proof.
 intros.
-apply (@trunc_equiv' (sigT (fun _ : IsCMonoid (prering_add G) => 
+apply (@trunc_equiv' (sigT (fun _ : IsCMonoid (prering_plus G) => 
   sigT (fun _ : IsMonoid (prering_mult G) => 
     Distributes G)))).
 issig (BuildIsSemiring G) (@semiring_add G) (@semiring_mult G)
@@ -1143,7 +1121,7 @@ issig (BuildIsSemiring G) (@semiring_add G) (@semiring_mult G)
 repeat (apply @trunc_sigma;[|intro C;clear C]);apply _.
 Defined.
 
-Instance semiring_cancel : forall {G : semiring} (a : prering_add G), Cancel a
+Instance semiring_cancel : forall {G : semiring} (a : prering_plus G), Cancel a
  := fun _ _ => _.
 
 Lemma rmult_0_l : forall {G : semiring}, 
@@ -1154,8 +1132,8 @@ apply semiring_cancel with (ZeroV ° x).
 path_via ((ZeroV + ZeroV) ° x).
 symmetry. apply semiring_distributes.
 path_via (ZeroV ° x).
-apply (ap (fun g => g ° x)). apply gid_id.
-apply inverse;apply gid_id.
+apply (ap (fun g => g ° x)). apply gid.
+apply inverse;apply gid.
 Defined.
 
 Lemma rmult_0_r : forall {G : semiring}, 
@@ -1165,8 +1143,8 @@ intros.
 apply semiring_cancel with (x ° ZeroV).
 path_via (x ° (ZeroV + ZeroV)).
 symmetry;apply semiring_distributes.
-path_via (x ° ZeroV). apply ap;apply gid_id.
-apply inverse;apply gid_id.
+path_via (x ° ZeroV). apply ap;apply gid.
+apply inverse;apply gid.
 Defined.
 
 Lemma rmult_inverse_right : forall G : semiring, forall x y : G,
@@ -1174,7 +1152,7 @@ Lemma rmult_inverse_right : forall G : semiring, forall x y : G,
 forall z,  @IsInverse (semiring_add_cmonoid G) (z°x) (z°y).
 Proof.
 intros ? ? ? H ?. apply linverse_inverse.
-red. apply transport with gidV;[|apply gid_id].
+red. apply transport with gidV;[|apply gid].
 path_via (z ° (x + y)).
 path_via (z°ZeroV). symmetry; apply rmult_0_r.
 apply ap. apply id_unique; apply _.
@@ -1186,7 +1164,7 @@ Lemma rmult_inverse_left : forall G : semiring, forall x y : G,
 forall z,  @IsInverse (semiring_add_cmonoid G) (x°z) (y°z).
 Proof.
 intros ? ? ? H ?. apply linverse_inverse.
-red. apply transport with gidV;[|apply gid_id]. symmetry; path_via ((x + y)°z).
+red. apply transport with gidV;[|apply gid]. symmetry; path_via ((x + y)°z).
 symmetry;apply semiring_distributes.
 path_via (ZeroV°z). apply (ap (fun g => g°z)). apply id_unique;apply _.
 apply rmult_0_l.
@@ -1207,7 +1185,7 @@ eapply rmult_inverse_right. apply _.
 Defined.
 
 Definition isring_sig : forall G : prering, sigT (fun semir : IsSemiring G =>
- forall x : prering_add G, Inverse x) <~> IsRing G.
+ forall x : prering_plus G, Inverse x) <~> IsRing G.
 Proof.
 intros. issig (BuildIsRing G) (@ring_is_semir G) (@r_opp G).
 Defined.
@@ -1220,7 +1198,7 @@ apply @trunc_sigma. apply _.
 intro. apply _.
 Defined.
 
-Definition easyIsRing (G : prering) {Hgr : IsGroup (prering_add G)}
+Definition easyIsRing (G : prering) {Hgr : IsGroup (prering_plus G)}
  {Hmon : IsMonoid (prering_mult G)} {Hdis : Distributes G} : IsRing G.
 Proof.
 apply BuildIsRing. apply BuildIsSemiring;apply _.
@@ -1256,10 +1234,10 @@ apply (@semiring_distributes G _).
 pose (@semiring_cancel G). 
 apply (@Right_cancel _ _ (c0 (a ° c))).
 apply (@concat _ _ (a°b + (a° (roppV c) + a°c))).
-simpl. symmetry. apply (@sg_assoc (prering_add G) _).
-eapply concat;[|symmetry;apply gid_id].
+simpl. symmetry. apply (@sg_assoc (prering_plus G) _).
+eapply concat;[|symmetry;apply gid].
 eapply concat;[|apply X].
-eapply concat;[ apply ap | apply gid_id].
+eapply concat;[ apply ap | apply gid].
 eapply concat. symmetry.
 apply semiring_distributes.
 eapply concat;[apply ap | apply rmult_0_r].
@@ -1268,7 +1246,7 @@ apply Hr in X0. revert X0.
 apply minus1Trunc_rect_nondep;[|apply Hset].
 intros [p | p].
 destruct H;auto.
-assert (Hcan : forall a : prering_add G, Rcancel a). apply _.
+assert (Hcan : forall a : prering_plus G, Rcancel a). apply _.
 apply (Hcan (ropp' c)).
 eapply concat. apply p.
 symmetry. apply id_unique;apply _.
@@ -1297,13 +1275,13 @@ Module RelatorInverse.
 Export Related_pr OMag_pr.
 Import minus1Trunc.
 
-Definition inverseRel (r : relator) := easyRelator r (fun x y => rrel y x).
+Definition inverseRel (r : Relation) := BuildRelation r (fun x y => rrel y x).
 
 Notation "r ^-1" := (inverseRel r).
 
 Lemma inverse_inverse : forall r, r ^-1 ^-1 = r.
 Proof.
-intros [T [r]];reflexivity.
+intros [T r];reflexivity.
 Defined.
 
 Instance inverse_refl : forall {r} {Hr : IsReflexive r}, IsReflexive (r ^-1)
@@ -1319,11 +1297,11 @@ Proof.
 intros ? ? ? ? ? H H';apply Ht with y;assumption.
 Defined.
 
-Definition inverse_P : forall P : relator -> Prop, 
+Definition inverse_P : forall P : Relation -> Prop, 
 (forall r, P r -> P (inverseRel r)) -> forall r, P (r ^-1) -> P r.
 Proof.
-intros ? H [r [rel]] Hr.
-set (R := {| runder := r; rrelC := {| classV := rel |} |}) in *.
+intros ? H [r rel] Hr.
+set (R := {| relcarr := r; rel_r := rel |}) in *.
 change (P (inverseRel (inverseRel R))). apply H. assumption.
 Defined.
 
@@ -1333,7 +1311,7 @@ Proof.
 intros;split;apply _.
 Defined.
 
-Instance inverse_is_prop : forall {r} {Hp : relatorProp r}, relatorProp (r ^-1)
+Instance inverse_is_prop : forall {r} {Hp : RelationProp r}, RelationProp (r ^-1)
  := fun _ H x y => H y x.
 
 Instance inverse_is_mere : forall {r} {Hm : IsMereRelator r},
@@ -1388,14 +1366,14 @@ Proof.
 intros. apply H.
 Defined.
 
-Definition inverse_lower_upper : forall {r : relator}
+Definition inverse_lower_upper : forall {r : Relation}
 {P : r->Type} {m:r} {H : IsLower (r ^-1) P m},
 IsUpper r P m.
 Proof.
 intros;apply H.
 Defined.
 
-Definition inverse_upper_lower : forall {r : relator}
+Definition inverse_upper_lower : forall {r : Relation}
 {P : r->Type} {m:r} {H : IsUpper (r ^-1) P m},
 IsLower r P m.
 Proof.
@@ -1462,20 +1440,20 @@ Defined.
 Lemma inverse_isinf_rw : IsInfimum = fun r => IsSupremum (r^-1).
 Proof.
 unfold IsInfimum;unfold IsSupremum.
-change ((fun (r : relator) (P : r -> Type) (m : r) =>
+change ((fun (r : Relation) (P : r -> Type) (m : r) =>
  IsMaximum r (IsLower r P) m)  =
-(fun (r : relator) (P : r -> Type) (m : r) => IsMinimum r ^-1 (IsLower r P) m)).
-apply (@ap _ _ (fun IS : forall r : relator, (r -> Type) -> r -> Type
+(fun (r : Relation) (P : r -> Type) (m : r) => IsMinimum r ^-1 (IsLower r P) m)).
+apply (@ap _ _ (fun IS : forall r : Relation, (r -> Type) -> r -> Type
   => fun r P m => IS r (IsLower r P) m) IsMaximum (fun r => IsMinimum r^-1)).
 apply inverse_ismax_rw.
 Defined.
 
 Lemma inverse_issup_rw : IsSupremum = fun r => IsInfimum (r^-1).
 Proof.
-change ((fun (r : relator) (P : r -> Type) (m : r) =>
+change ((fun (r : Relation) (P : r -> Type) (m : r) =>
  IsMinimum r (IsUpper r P) m)  =
-(fun (r : relator) (P : r -> Type) (m : r) => IsMaximum r ^-1 (IsUpper r P) m)).
-apply (@ap _ _ (fun IS : forall r : relator, (r -> Type) -> r -> Type
+(fun (r : Relation) (P : r -> Type) (m : r) => IsMaximum r ^-1 (IsUpper r P) m)).
+apply (@ap _ _ (fun IS : forall r : Relation, (r -> Type) -> r -> Type
   => fun r P m => IS r (IsUpper r P) m) IsMinimum (fun r => IsMaximum r^-1)).
 apply inverse_ismin_rw.
 Defined.
@@ -1489,7 +1467,7 @@ Import minus1Trunc.
 
 Section Meet_to_order.
 
-Context {r : oMag} {Hs : IsHSet r} {Hp : relatorProp r}
+Context {r : LR_sig} {Hs : IsHSet r} {Hp : RelationProp r}
 {Hr : IsMeetSemiLattice r}.
 
 
@@ -1548,7 +1526,7 @@ End Meet_to_order.
 
 Section Order_to_meet.
 
-Context {r : oMag} {Hset : IsHSet r} {Hpr : relatorProp r} {Hpo : IsPoset r}
+Context {r : LR_sig} {Hset : IsHSet r} {Hpr : RelationProp r} {Hpo : IsPoset r}
 {Hmeet : forall a b : r, IsInfimum r (doubleton a b) (gop a b)}.
 
 Instance meet_comm : Commutative r.
@@ -1629,12 +1607,13 @@ Instance meet_semilattice : IsMeetSemiLattice r := BuildIsMeetSemiLattice _ _ _.
 
 End Order_to_meet.
 
-Definition semil_inverse (r : oMag) : oMag := 
-BuildOMag r (olawC r) (Related.BuildClass (fun x y => rrel y x)).
+Definition semil_inverse (r : LR_sig) : LR_sig := 
+BuildLR_sig r (BuildLR_Class _ (@gop r) 
+  (fun x y : r => rrel y x)).
 
 Definition semil_inverse_idem : forall r, semil_inverse (semil_inverse r) = r.
 Proof.
-intros [r op [rel]];reflexivity.
+intros [r [op rel]];reflexivity.
 Defined.
 
 Instance semimeet_inverse : forall {r} {Hr: IsMeetSemiLattice r},
@@ -1679,8 +1658,8 @@ change (IsPoset (semil_inverse r)).
 apply semilattice_meet_poset.
 Defined.
 
-Instance join_is_sup2 : forall {r : oMag}
-{Hs : IsHSet r} {Hp : relatorProp r} {Hr : IsJoinSemiLattice r},
+Instance join_is_sup2 : forall {r : LR_sig}
+{Hs : IsHSet r} {Hp : RelationProp r} {Hr : IsJoinSemiLattice r},
 forall {x y : r}, IsSupremum r (doubleton x y) (gop x y).
 Proof.
 intros ? ? ? ?.
@@ -1692,7 +1671,7 @@ Defined.
 
 Section Order_to_join.
 
-Context {r : oMag} {Hset : IsHSet r} {Hpr : relatorProp r} {Hpo : IsPoset r}
+Context {r : LR_sig} {Hset : IsHSet r} {Hpr : RelationProp r} {Hpo : IsPoset r}
 {Hjoin : forall a b : r, IsSupremum r (doubleton a b) (gop a b)}.
 
 Lemma join_gop_eq_pr : forall x y z : r, IsSupremum r (doubleton x y) z -> 
@@ -1723,7 +1702,7 @@ forall a : F, ~ a = ZeroV -> forall b : F, ~ b = ZeroV -> ~ (a ° b) = ZeroV.
 Proof.
 intros ? ? ? Ha ? Hb H.
 assert (Ha' : ~ ~ (rrel a ZeroV)).
-  intro H'. apply Ha. apply apart_tight;assumption.
+  intro H'. apply Ha. apply apart_tight; assumption.
 
 destruct Ha'. intro Ha'.
 apply Hb.
