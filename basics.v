@@ -2,6 +2,10 @@ Require Import HoTT FunextAxiom UnivalenceAxiom.
 Require Import unique_choice.
 Require Export structures.
 
+Import AlgebraNotation.
+
+Definition neq {T} : relation T := fun x y => ~ x=y.
+
 Instance iff_trans : Transitive iff.
 Proof.
 red. intros A B C [H H'] [H0 H0'].
@@ -499,6 +503,16 @@ intro.
 apply trunc_forall.
 Defined.
 
+Instance constrlinear_linear : forall {r}, IsConstrLinear r -> IsLinear r.
+Proof.
+red;intros;apply min1;auto.
+Defined.
+
+Instance constrtotal_total : forall {r}, IsConstrTotalOrder r -> IsTotalOrder r.
+Proof.
+intros. constructor; apply _.
+Defined.
+
 Definition isstrictposet_sig : forall r, sigT (fun _ : IsIrreflexive r => 
 IsTransitive r) <~> IsStrictPoset r.
 Proof.
@@ -532,18 +546,18 @@ destruct (strict_poset_antisymm _ _ _ Hx Hy).
 destruct (strict_poset_antisymm _ _ _ Hx Hy).
 Defined.
 
-Lemma poset2_lt_le : forall {r : RR_sig} {Hpo : IsPoset2 r} (x y : r), 
-RR_R2 x y -> RR_R1 x y.
+Lemma poset2_lt_le : forall {r : OrderPair_sig} {Hpo : IsPoset2 r} (x y : r), 
+ x < y -> x <= y.
 Proof.
 intros. apply poset2_tight. red. apply strict_poset_antisymm.
 apply _. assumption.
 Defined.
 
-Lemma poset2_linear_le_lt_trans : forall {r : RR_sig} 
+Lemma poset2_linear_le_lt_trans : forall {r : OrderPair_sig} 
 {Hpr : RelationProp (RR_to_R2 r)}
 {Hpo : IsPoset2 r}
 {Hlin : IsStrictLinear (RR_to_R2 r)}, 
-forall x y : r, RR_R1 x y -> forall z, RR_R2 y z -> RR_R2 x z.
+forall x y : r, x <= y -> forall z, y < z -> x < z.
 Proof.
 intros ? ? ? ? ? ? H ? H'.
 eapply minus1Trunc_rect_nondep;[|apply Hpr|apply Hlin;apply H'].
@@ -551,11 +565,11 @@ intros [H0|H0];[|apply H0]. fold (@RR_to_R2 r) in H0.
 apply poset2_tight in H. destruct H;assumption.
 Defined.
 
-Lemma poset2_linear_lt_le_trans : forall {r : RR_sig}
+Lemma poset2_linear_lt_le_trans : forall {r : OrderPair_sig}
 {Hpr : RelationProp (RR_to_R2 r)}
 {Hpo : IsPoset2 r}
 {Hlin : IsStrictLinear (RR_to_R2 r)}, 
-forall x y : r, RR_R2 x y -> forall z, RR_R1 y z -> RR_R2 x z.
+forall x y : r, x < y -> forall z, y <= z -> x < z.
 Proof.
 intros ? ? ? ? ? ? H ? H'.
 eapply minus1Trunc_rect_nondep;[|apply Hpr|apply Hlin;apply H].
@@ -673,16 +687,16 @@ Proof.
 intros ? ? m. exists (minimum_val m). apply minimum_is_infimum;apply _.
 Defined.
 
-Instance upper_prop : forall (r : Relation)
- {Hp : forall x y : r, IsHProp (rrel x y)},
+Instance upper_prop : forall (r : LeqRelation)
+ {Hp : forall x y : r, IsHProp (x <= y)},
 forall P m, IsHProp (IsUpper r P m).
 Proof.
 intros.
 apply trunc_forall.
 Defined.
 
-Instance lower_prop : forall (r : Relation)
- {Hp : forall x y : r, IsHProp (rrel x y)},
+Instance lower_prop : forall (r : LeqRelation)
+ {Hp : forall x y : r, IsHProp (x <= y)},
 forall P m, IsHProp (IsLower r P m).
 Proof.
 intros.
@@ -703,31 +717,31 @@ intros. issig (BuildIsMinimum r P m) (@minimum_lower r P m)
  (@minimum_verifies r P m).
 Defined.
 
-Instance ismaximum_prop : forall (r : Relation)
- {Hp : forall x y : r, IsHProp (rrel x y)} P {Hp' : forall x, IsHProp (P x)}  m, 
+Instance ismaximum_prop : forall (r : LeqRelation)
+ {Hp : forall x y : r, IsHProp (x <= y)} P {Hp' : forall x, IsHProp (P x)} m,
 IsHProp (IsMaximum r P m).
 Proof.
 intros;eapply trunc_equiv'. apply ismax_sig.
 apply trunc_sigma.
 Defined.
 
-Instance isminimum_prop : forall (r : Relation)
- {Hp : forall x y : r, IsHProp (rrel x y)} P {Hp' : forall x, IsHProp (P x)}  m, 
+Instance isminimum_prop : forall (r : LeqRelation)
+ {Hp : forall x y : r, IsHProp (x <= y)} P {Hp' : forall x, IsHProp (P x)} m,
 IsHProp (IsMinimum r P m).
 Proof.
 intros;eapply trunc_equiv'. apply ismin_sig.
 apply trunc_sigma.
 Defined.
 
-Instance issupremum_prop : forall (r : Relation)
- {Hp : forall x y : r, IsHProp (rrel x y)},
+Instance issupremum_prop : forall (r : LeqRelation)
+ {Hp : forall x y : r, IsHProp (x <= y)},
 forall P m, IsHProp (IsSupremum r P m).
 Proof.
 intros. apply isminimum_prop;apply _.
 Defined.
 
-Instance isinfimum_prop : forall (r : Relation)
- {Hp : forall x y : r, IsHProp (rrel x y)},
+Instance isinfimum_prop : forall (r : LeqRelation)
+ {Hp : forall x y : r, IsHProp (x <= y)},
 forall P m, IsHProp (IsInfimum r P m).
 Proof.
 intros;apply ismaximum_prop;apply _.
@@ -744,7 +758,7 @@ intros;issig (BuildMinimum r P) (@minimum_val r P) (@minimum_is_minimum r P).
 Defined.
 
 Instance maximum_prop : forall {r} {Ho : IsPoset r}
-{Hr : forall x y : r, IsHProp (rrel x y)} P {Hp : forall x, IsHProp (P x)},
+{Hr : forall x y : r, IsHProp (x <= y)} P {Hp : forall x, IsHProp (P x)},
 IsHProp (Maximum r P).
 Proof.
 intros;eapply trunc_equiv'. apply maximum_sig.
@@ -822,8 +836,8 @@ intros. apply funext_axiom.
 intro x;apply univalence_axiom. apply doubleton_comm_equiv.
 Defined.
 
-Lemma total_order_max2 : forall {r : Relation} {Hset : IsHSet r}
-{Hpr : forall x y : r, IsHProp (rrel x y)} {Hto : IsTotalOrder r},
+Lemma total_order_max2 : forall {r : LeqRelation} {Hset : IsHSet r}
+{Hpr : forall x y : r, IsHProp (x <= y)} {Hto : IsTotalOrder r},
 forall a b, Maximum2 r a b.
 Proof.
 intros.
@@ -839,8 +853,8 @@ intros [H|H].
 - intros;apply minus1Trunc_is_prop.
 Defined.
 
-Lemma total_order_min2 : forall {r : Relation} {Hset : IsHSet r}
-{Hpr : forall x y : r, IsHProp (rrel x y)} {Hto : IsTotalOrder r},
+Lemma total_order_min2 : forall {r : LeqRelation} {Hset : IsHSet r}
+{Hpr : forall x y : r, IsHProp (x <= y)} {Hto : IsTotalOrder r},
 forall a b, Minimum2 r a b.
 Proof.
 intros.
@@ -857,7 +871,7 @@ intros [H|H].
 Defined.
 
 Instance total_order_lattice : forall {r : Relation} {Hset : IsHSet r}
-{Hpr : forall x y : r, IsHProp (rrel x y)}
+{Hpr : forall x y : r, IsHProp (x <= y)}
 {Hto : IsTotalOrder r}, IsLattice r.
 Proof.
 intros;split. apply _.
@@ -872,7 +886,7 @@ Definition is_inter {T : Type} (P1 P2 P' : T -> Type) :=
 
 Definition singleton {T : Type} (x : T) := doubleton x x.
 
-Instance singleton_min : forall {r : Relation} {Hpr : RelationProp r}
+Instance singleton_min : forall {r : LeqRelation} {Hpr : RelationProp r}
  {Hr : IsReflexive r} x, IsMinimum r (singleton x) x.
 Proof.
 intros. split.
@@ -894,7 +908,7 @@ Defined.
 
 Section UnionInterSec.
 
-Context {r : Relation} {Hset : IsHSet r} {Hpr : RelationProp r}
+Context {r : LeqRelation} {Hset : IsHSet r} {Hpr : RelationProp r}
 {Hpo : IsPoset r}
 {P1 P2 P' : r -> Type}
 {Hp1 : forall x, IsHProp (P1 x)} {Hp2 : forall x, IsHProp (P2 x)}
@@ -1268,6 +1282,17 @@ intros;split;
 [apply intdom_partial_cancels_left | apply intdom_partial_cancels_right];
 assumption.
 Defined.
+
+Lemma zero_inverse_prop : forall G : semiring,
+ @Inverse (prering_mult G) (@ZeroV G) -> forall x : G, x = ZeroV.
+Proof.
+intros G Y x.
+path_via (x ° ((inverse_val _ Y) ° ZeroV)).
+apply inverse.
+apply Y.
+path_via (x ° ZeroV);[apply ap|];apply rmult_0_r.
+Defined.
+
 
 End Ring_pr.
 
@@ -1696,6 +1721,7 @@ End Lattice_pr.
 
 Module Field_pr.
 Export Field Ring_pr Related_pr.
+Import minus1Trunc.
 
 Lemma field_intdom_pr : forall {F} {Hf : IsField F}, 
 forall a : F, ~ a = ZeroV -> forall b : F, ~ b = ZeroV -> ~ (a ° b) = ZeroV.
@@ -1746,6 +1772,40 @@ forall (a b : F), @IsInverse (prering_mult F) a b -> rrel b ZeroV.
 Proof.
 intros. apply field_inv_back. exists a. apply inverse_symm. assumption.
 Defined.
+
+
+Section Field_of_DecField.
+
+Variable F : prefield.
+
+Hypothesis Hneq : forall x y : F, x<>y <-> neq x y.
+
+Context {Hdec : decidable_paths F} {Hfield : IsDecField F}.
+
+Global Instance decfield_is_field : IsField F.
+Proof.
+refine (BuildIsField _ _ decfield_is_ring _ _ _ _ _).
+- apply neq_apart. assumption.
+  assumption.
+- intros ? ? ? ? H.
+  apply min1. destruct (Hdec x x');[destruct (Hdec y y')|].
+  apply Hneq in H. destruct H;apply ap11;[apply ap|];assumption.
+  right;apply Hneq;assumption.
+  left ;apply Hneq;assumption.
+- intros ? ? ? ? H.
+  apply min1. destruct (Hdec x x');[destruct (Hdec y y')|].
+  apply Hneq in H. destruct H;apply ap11;[apply ap|];assumption.
+  right;apply Hneq;assumption.
+  left ;apply Hneq;assumption.
+- apply Hneq. apply decfield_neq.
+- intros. exists (decInv x). apply decInv_inverse. apply Hneq;assumption.
+- intros x X. apply Hneq;intro H.
+  apply inverse in H;destruct H.
+  apply decfield_neq.
+  apply zero_inverse_prop. assumption.
+Defined.
+
+End Field_of_DecField.
 
 End Field_pr.
 

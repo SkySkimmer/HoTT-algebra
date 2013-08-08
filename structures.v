@@ -22,7 +22,6 @@ Note that we usually define pack_val' : forall G:base, IsFoo G -> ValueType G
 which simplifies to is_val yet works for theorems using pack_val
 *)
 
-
 Module Signatures.
 
 (****************************************
@@ -52,6 +51,9 @@ Record prering := BuildPrering {
 rigcarr :> Type;
 rigC : preringClass rigcarr
 }.
+
+Definition makePrering : forall T : Type, law T -> law T -> prering
+ := fun T pl ml => BuildPrering T (BuildPreringC _ pl ml).
 
 (* canonical structures? *)
 Canonical Structure prering_plus (G : prering) : magma :=
@@ -127,6 +129,9 @@ RR_carr :> Type;
 RR_class : RR_Class RR_carr
 }.
 
+Definition makeRR_sig : forall T : Type, relation T -> relation T -> RR_sig
+ := fun T r1 r2 => BuildRR_sig T (BuildRR_Class _ r1 r2).
+
 Canonical Structure RR_to_R1 (R : RR_sig) : Relation :=
 BuildRelation R (RR_c_R1 _ (RR_class R)).
 Canonical Structure RR_to_R2 (R : RR_sig) : Relation :=
@@ -147,6 +152,9 @@ LR_carr :> Type;
 LR_class : LR_Class LR_carr
 }.
 
+Definition makeLR_sig : forall T : Type, law T -> relation T -> LR_sig
+ := fun T op rel => BuildLR_sig T (BuildLR_Class _ op rel).
+
 Canonical Structure LR_to_L (G : LR_sig) : magma :=
 BuildMagma G (LR_c_L _ (LR_class G)).
 Coercion LR_to_L : LR_sig >-> magma.
@@ -156,8 +164,9 @@ BuildRelation G (LR_c_R _ (LR_class G)).
 Coercion LR_to_R : LR_sig >-> Relation.
 
 (* example of why we don't need LR_L or LR_R *)
-Lemma blob : forall G : LR_sig, forall x y z : G, rrel (gop y z) x.
-Abort.
+(*
+Check (forall G : LR_sig, forall x y z : G, rrel (gop y z) x).
+*)
 
 (******************* LLR ***********************)
 
@@ -171,6 +180,9 @@ Record LLR_sig := BuildLLR_sig {
 LLR_carr :> Type;
 LLR_class : LLR_Class LLR_carr
 }.
+
+Definition makeLLR_sig : forall T : Type, law T -> law T -> relation T -> LLR_sig
+ := fun T pl ml rel => BuildLLR_sig T (BuildLLR_Class _ pl ml rel).
 
 Canonical Structure LLR_to_LL (G : LLR_sig) : prering :=
 BuildPrering G (BuildPreringC _ (LLR_c_L1 _ (LLR_class G))
@@ -189,11 +201,13 @@ Canonical Structure LLR_to_L2R (G : LLR_sig) : LR_sig :=
 BuildLR_sig G (BuildLR_Class _ (LLR_c_L2 _ (LLR_class G))
                                (LLR_c_R _ (LLR_class G))).
 
+(*
 Lemma blob : forall G : LLR_sig, forall a b c d : G,
  rrel ((rplus a b):G) (rmult c d).
 Proof.
 simpl. (*gets rid of the :G*)
 Abort.
+*)
 
 (****************** LLRRR *******************)
 
@@ -214,6 +228,9 @@ LLRRR_carr :> Type;
 LLRRR_class : LLRRR_Class LLRRR_carr
 }.
 
+Definition makeLLRRR_sig T pl ml r1 r2 r3
+ := BuildLLRRR_sig T (BuildLLRRR_Class T pl ml r1 r2 r3).
+
 Canonical Structure LLRRR_to_LL (G : LLRRR_sig) : prering :=
 BuildPrering G (BuildPreringC _ (LLRRR_L1 _ (LLRRR_class G))
                                  (LLRRR_L2 _ (LLRRR_class G))).
@@ -232,10 +249,129 @@ BuildLLR_sig G (BuildLLR_Class _ (LLRRR_L1 _ (LLRRR_class G))
                                  (LLRRR_L2 _ (LLRRR_class G))
                                  (LLRRR_R3 _ (LLRRR_class G))).
 
-Lemma blob : forall G : LLRRR_sig, forall a b : G, rplus a b = rmult a b.
+Canonical Structure LLRRR_to_R1R2 (G : LLRRR_sig) : RR_sig :=
+BuildRR_sig G (BuildRR_Class _   (LLRRR_R1 _ (LLRRR_class G))
+                                 (LLRRR_R2 _ (LLRRR_class G))).
+
+(*
+Lemma test : forall G : LLRRR_sig, forall a b : G, rplus a b = rmult a b.
 Abort.
+*)
 
 End Signatures.
+
+
+
+Module AlgebraNotation.
+Export Signatures.
+
+Class PlusOp (A : Type) := plus : law A.
+
+Infix "+" := plus.
+
+Ltac foldPlusOp op := change op with (@plus _ op).
+
+Definition AdditiveMagma := magma.
+
+Instance AddMag_PlusOp : forall G : AdditiveMagma, PlusOp G := @gop.
+
+Ltac foldAddMag G := change (@gop G) with (@plus _ (AddMag_PlusOp G)).
+
+
+Class MultOp (A : Type) := mult : law A.
+
+Infix "°" := mult (at level 40).
+
+Ltac foldMultOp op := change op with (@mult _ op).
+
+Definition MultiplicativeMagma := magma.
+
+Instance MultMag_MultOp : forall G : MultiplicativeMagma, MultOp G
+ := @gop.
+
+Ltac foldMultMag G := change (@gop G) with (@mult _ (MultMag_MultOp G)).
+
+Instance Prering_PlusOp : forall G : prering, PlusOp G := @rplus.
+Instance Prering_MultOp : forall G : prering, MultOp G := @rmult.
+
+Ltac foldAddPrering G := change (@rplus G) with (@plus _ (Prering_PlusOp G)).
+Ltac foldMultPrering G := change (@rmult G) with (@mult _ (Prering_MultOp G)).
+Ltac foldPreringOps G := foldAddPrering G; foldMultPrering G.
+
+(*
+Lemma blob : forall G : prering, forall x y z: G, x ° (y+z) = (x°y) + x°z.
+Lemma blob' : forall G : LLR_sig, forall x y : G, x ° y = rmult x y.
+intros. foldPreringOps G.
+Lemma blob'' : forall G : prering, forall x y : G, rplus x y = rmult y x.
+intros. foldPreringOps G.
+*)
+
+
+Class LeqOp (A : Type) := leq : relation A.
+
+Infix "<=" := leq.
+
+Ltac foldLeqOp op := change op with (@leq _ op).
+
+Definition LeqRelation := Relation.
+
+Instance LeqRel_LeqOp : forall R : LeqRelation, LeqOp R := @rrel.
+
+Ltac foldLeqRel R := change (@rrel R) with (@leq _ (LeqRel_LeqOp R)).
+
+
+Class LtOp (A : Type) := lt : relation A.
+
+Infix "<" := lt.
+
+Ltac foldLtOp op := change op with (@lt _ op).
+
+Definition LtRelation := Relation.
+
+Instance LtRel_LtOp : forall R : LtRelation, LtOp R := @rrel.
+
+Ltac foldLtRel R := change (@rrel R) with (@lt _ (LtRel_LtOp R)).
+
+
+Definition OrderPair_sig := RR_sig.
+
+Instance Order2_LeqOp : forall R : OrderPair_sig, LeqOp R := @RR_R1.
+Instance Order2_LtOp : forall R : OrderPair_sig, LtOp R := @RR_R2.
+
+Ltac foldOrderLeq R := change (@RR_R1 R) with (@leq _ (Order2_LeqOp R)).
+Ltac foldOrderLt R := change (@RR_R2 R) with (@lt _ (Order2_LtOp R)).
+Ltac foldOrder2 R := foldOrderLeq R; foldOrderLt R.
+
+
+Class ApartOp (A : Type) := apart : relation A.
+
+Infix "<>" := apart.
+
+Ltac foldApartOp op := change op with (@apart _ op).
+
+Definition ApartRelation := Relation.
+
+Instance ApartRel_ApartOp : forall R : ApartRelation, ApartOp R := @rrel.
+
+Ltac foldApartRel R := change (@rrel R) with (@apart _ (ApartRel_ApartOp R)).
+
+
+Definition prefield := LLR_sig.
+
+Instance Prefield_ApartOp : forall F : prefield, ApartOp F := @rrel.
+
+Ltac foldPrefieldApart F := change (@rrel F) with
+   (@apart _ (Prefield_ApartOp F)).
+
+(*
+Lemma blob : forall F : prefield, forall x y : F, x+y <> x°y.
+*)
+
+End AlgebraNotation.
+
+
+
+
 
 Module Magma.
 Export Signatures.
@@ -400,6 +536,7 @@ End Magma.
 
 Module Related.
 Export Signatures.
+Import AlgebraNotation.
 
 Class RelationProp (r : Relation) :=
  Relationprop : forall x y : r, IsHProp (rrel x y).
@@ -410,9 +547,9 @@ mereRelation_is_set :> IsHSet r;
 mereRelation_is_prop :> RelationProp r
 }.
 
-Class IsTransitive (R : Relation) := istrans : Transitive (@rrel R).
-Class IsReflexive (R : Relation) := isrefl : Reflexive (@rrel R).
-Class IsSymmetric (R : Relation) := issymm : Symmetric (@rrel R).
+Class IsTransitive (R : Relation) := istrans :> Transitive (@rrel R).
+Class IsReflexive (R : Relation) := isrefl :> Reflexive (@rrel R).
+Class IsSymmetric (R : Relation) := issymm :> Symmetric (@rrel R).
 
 Class IsEquivalence (R : Relation) := BuildIsEquivalence {
 equivalence_refl :> IsReflexive R;
@@ -420,13 +557,13 @@ equivalence_symm :> IsSymmetric R;
 equivalence_trans :> IsTransitive R
 }.
 
-Class IsAntisymmetric (R : Relation) :=
- isantisymm : forall x y : R, rrel x y -> rrel y x -> x = y.
+Class IsAntisymmetric (R : LeqRelation) :=
+ isantisymm : forall x y : R, x <= y -> y <= x -> x = y.
 
 Class IsIrreflexive (R : Relation) := 
  isirrefl : forall x : R, rrel x x -> Empty.
 
-Class IsPoset (R : Relation) := BuildIsPoset {
+Class IsPoset (R : LeqRelation) := BuildIsPoset {
 order_trans :> IsTransitive R;
 order_refl :> IsReflexive R;
 order_antisymm :> IsAntisymmetric R
@@ -439,26 +576,26 @@ Class IsStrictLinear (R : Relation) :=
 Class IsCotransitive (R : Relation) := 
  iscotrans :> IsStrictLinear R.
 
-Class IsApartness (R : Relation) := BuildIsApartness {
+Class IsApartness (R : ApartRelation) := BuildIsApartness {
 apart_irrefl :> IsIrreflexive R;
 apart_symm :> IsSymmetric R;
 apart_cotrans :> IsCotransitive R;
-apart_tight : forall x y : R, ~ rrel x y -> x=y
+apart_tight : forall x y : R, ~ x <> y -> x=y
 }.
 
-Class IsLinear (R : Relation) := 
- islinear : forall x y : R, minus1Trunc (rrel x y \/ rrel y x).
+Class IsLinear (R : LeqRelation) := 
+ islinear : forall x y : R, minus1Trunc (x <= y \/ y <= x).
 
-Class IsConstrLinear (R : Relation) := 
- isconstrlinear : forall x y : R, rrel x y \/ rrel y x.
+Class IsConstrLinear (R : LeqRelation) := 
+ isconstrlinear : forall x y : R, x <= y \/ y <= x.
 
 Class IsConstrStrictLinear (R : Relation) := isconstrstrictlinear
- : forall x y : R, rrel x y -> forall z,rrel x z \/ rrel z y.
+ : forall x y : R, rrel x y -> forall z, rrel x z \/ rrel z y.
 
 Class IsDecidable (R : Relation) := 
  isdecidable : forall x y : R, (rrel x y)+(~rrel x y).
 
-Class IsStrictPoset (R : Relation) := BuildIsStrictPoset {
+Class IsStrictPoset (R : LtRelation) := BuildIsStrictPoset {
 strictposet_irrefl :> IsIrreflexive R;
 strictposet_trans :> IsTransitive R
 }.
@@ -466,73 +603,73 @@ strictposet_trans :> IsTransitive R
 Class IsTight (r : RR_sig) :=
  istight : forall x y : r, RR_R1 x y <-> ~ RR_R2 y x.
 
-Class IsPoset2 (r : RR_sig) := BuildIsPoset2 {
+Class IsPoset2 (r : OrderPair_sig) := BuildIsPoset2 {
 poset2_1 :> IsPoset (RR_to_R1 r);
 poset2_2 :> IsStrictPoset (RR_to_R2 r);
 poset2_tight :> IsTight r
 }.
 
-Class IsUpper (r : Relation) (P : r -> Type) (m : r) := 
-isupper : forall x, P x -> rrel x m.
-Class IsLower (r : Relation) (P : r -> Type) (m : r) := 
-islower : forall x, P x -> rrel m x.
+Class IsUpper (r : LeqRelation) (P : r -> Type) (m : r) := 
+isupper : forall x, P x -> x <= m.
+Class IsLower (r : LeqRelation) (P : r -> Type) (m : r) := 
+islower : forall x, P x -> m <= x.
 
-Class IsMaximum (r : Relation) P (m : r) := BuildIsMaximum {
+Class IsMaximum (r : LeqRelation) P (m : r) := BuildIsMaximum {
 maximum_upper :> IsUpper r P m;
 maximum_verifies : P m
 }.
 
-Class IsMinimum (r : Relation) P (m : r) := BuildIsMinimum {
+Class IsMinimum (r : LeqRelation) P (m : r) := BuildIsMinimum {
 minimum_lower :> IsLower r P m;
 minimum_verifies : P m
 }.
 
-Class IsSupremum (r : Relation) P (m : r) :=
- issupremum : IsMinimum r (IsUpper r P) m.
+Class IsSupremum (r : LeqRelation) P (m : r) :=
+ issupremum :> IsMinimum r (IsUpper r P) m.
 
-Instance supremum_upper : forall r P m {H : IsSupremum r P m}, IsUpper r P m := 
+Instance supremum_upper : forall r P m {H : IsSupremum r P m}, IsUpper r P m :=
 fun _ _ _ H => @minimum_verifies _ _ _ H.
 
-Class IsInfimum (r : Relation) P (m : r) :=
- isinfimum : IsMaximum r (IsLower r P) m.
+Class IsInfimum (r : LeqRelation) P (m : r) :=
+ isinfimum :> IsMaximum r (IsLower r P) m.
 
 Instance infimum_lower : forall r P m {H : IsInfimum r P m}, IsLower r P m := 
 fun _ _ _ H => @maximum_verifies _ _ _ H.
 
-Record Upper (r : Relation) P := BuildUpper {
+Record Upper (r : LeqRelation) P := BuildUpper {
 upper_val :> r;
 upper_is_upper :> IsUpper r P upper_val
 }.
 Existing Instance upper_is_upper.
 Arguments upper_val {_ _} _.
 
-Record Lower (r : Relation) P := BuildLower {
+Record Lower (r : LeqRelation) P := BuildLower {
 lower_val :> r;
 lower_is_lower :> IsLower r P lower_val
 }.
 Existing Instance lower_is_lower.
 Arguments lower_val {_ _} _.
 
-Record Maximum (r : Relation) P := BuildMaximum {
+Record Maximum (r : LeqRelation) P := BuildMaximum {
 maximum_val :> r;
 maximum_is_maximum :> IsMaximum r P maximum_val
 }.
 Existing Instance maximum_is_maximum.
 Arguments maximum_val {_ _} _.
 
-Record Minimum (r : Relation) P := BuildMinimum {
+Record Minimum (r : LeqRelation) P := BuildMinimum {
 minimum_val :> r;
 minimum_is_minimum :> IsMinimum r P minimum_val
 }.
 Existing Instance minimum_is_minimum.
 Arguments minimum_val {_ _} _.
 
-Definition Supremum (r : Relation) P : Type := Minimum r (IsUpper r P).
+Definition Supremum (r : LeqRelation) P : Type := Minimum r (IsUpper r P).
 Instance supremum_is_supremum : forall r P (m : Supremum r P),
  IsSupremum r P m.
 Proof. intros. red. apply _. Defined.
 
-Definition Infimum (r : Relation) P := Maximum r (IsLower r P).
+Definition Infimum (r : LeqRelation) P := Maximum r (IsLower r P).
 Instance infimum_is_infimum : forall r P (m : Infimum r P),
  IsInfimum r P m.
 Proof. intros;red;apply _. Defined.
@@ -545,18 +682,18 @@ Definition Infimum2  (r : Relation) (a b : r) := Infimum  r (doubleton a b).
 Definition Maximum2  (r : Relation) (a b : r) := Maximum  r (doubleton a b).
 Definition Minimum2  (r : Relation) (a b : r) := Minimum  r (doubleton a b).
 
-Class IsLattice (r : Relation) := BuildIsLattice {
+Class IsLattice (r : LeqRelation) := BuildIsLattice {
 lattice_is_poset :> IsPoset r;
 lattice_has_sup2 : forall a b, Supremum2 r a b;
 lattice_has_inf2 : forall a b, Infimum2  r a b
 }.
 
-Class IsTotalOrder (r : Relation) := BuildIsTotalOrder {
+Class IsTotalOrder (r : LeqRelation) := BuildIsTotalOrder {
 totalorder_is_poset :> IsPoset r;
 totalorder_linear :> IsLinear r
 }.
 
-Class IsConstrTotalOrder (r : Relation) := BuildIsConstrTotalOrder {
+Class IsConstrTotalOrder (r : LeqRelation) := BuildIsConstrTotalOrder {
 constrtotalorder_is_poset :> IsPoset r;
 constrtotalorder_linear :> IsConstrLinear r
 }.
@@ -613,10 +750,12 @@ and embedding for < for a > 0
 End OrderedMagma.
 
 Module Ring.
-Export Magma.
+Export Magma AlgebraNotation.
 
+(*
 Infix "+" := (@rplus _).
 Infix "°" := (@rmult _) (at level 40).
+*)
 
 Class Ldistributes (G : prering) := left_distributes : 
 forall a b c : G, a ° (b+c) = (a°b) + (a°c).
@@ -795,14 +934,51 @@ Notation "'prefield_Relation'" := LLR_to_R : field_scope.
 
 Open Scope field_scope.
 
+Class IsDecField (F : prering) := BuildIsDecField {
+decfield_is_ring :> IsRing F;
+decfield_neq : ~ ((@OneV' F _):F) = ZeroV';
+dec_inv : F -> F;
+dec_inv0 : dec_inv ZeroV' = ZeroV';
+dec_inv_ok : forall x : F, ~ x = ZeroV' ->
+             @IsInverse (prering_mult F) x (dec_inv x)
+}.
+
+Record decfield := BuildDecField {
+decfield_prering :> prering;
+decfield_is_decfield :> IsDecField decfield_prering
+}.
+
+Existing Instance decfield_is_decfield.
+Canonical Structure is_decfield_decfield (F : prering) {Hf : IsDecField F}
+ := BuildDecField F Hf.
+
+Canonical Structure decfield_ring : decfield -> ring
+ := fun F => BuildRing F _.
+Coercion decfield_ring : decfield >-> ring.
+
+Definition decInv {F : decfield} : F -> F := dec_inv.
+Definition decInv' {F : prering} {Hf : IsDecField F} : F -> F := decInv.
+
+Lemma decInv_0 : forall F : decfield, decInv (@ZeroV F) = ZeroV.
+Proof.
+intros. apply dec_inv0.
+Defined.
+
+Instance decInv_inverse : forall F : decfield, forall x : F, ~ x = ZeroV -> 
+  @IsInverse (prering_mult F) x (decInv x).
+Proof.
+intros F. apply dec_inv_ok.
+Defined.
+
+
 Class IsField (F : prefield) := BuildIsField {
 field_is_apart :> IsApartness (prefield_Relation F);
 field_is_ring :> IsRing F;
 field_add :> IsBinRegular (prefield_add F);
 field_mult :> IsBinRegular (prefield_mult F);
-field_neq : rrel ((@OneV' F _):F) ZeroV';
-f_inv : forall x : F, rrel x ZeroV' -> @Inverse (prering_mult F) x;
-field_inv_back : forall x : F, @Inverse (prering_mult F) x -> rrel x ZeroV'
+field_neq : ((@OneV' F _):F) <> ZeroV';
+f_inv : forall x : F, x <> ZeroV' -> @Inverse (prering_mult F) x;
+field_inv_back : forall x : F, @Inverse (prering_mult F) x -> x <> ZeroV'
 }.
 
 Record field := BuildField {
@@ -827,57 +1003,3 @@ Definition finvV' {F} {Hf : IsField F} : forall x : F, rrel x ZeroV ->
 
 End Field.
 
-(*
-Module AlgebraNotation.
-Export Magma Related OrderedMagma Ring Field.
-(*                            WIP                               *)
-
-Class Le A := le : relation A.
-Infix "<=" := le.
-Class LeRel := lerel : Relation.
-Instance getLe : forall {r : LeRel}, Le r := @rrel.
-
-Class Lt A := lt : relation A.
-Infix "<" := lt.
-Class LtRel := ltrel : Relation.
-Instance getLt : forall {r : LtRel}, Lt r := @rrel.
-
-Class Apart A := apart : relation A.
-Infix "#" := apart.
-Class ApartRel := apartrel : Relation.
-Instance getApart : forall {r : ApartRel}, Apart r := @rrel.
-
-Class OrderRel2 := orderrel2 : RR.
-Instance getLe2 : forall {r : OrderRel2}, Le r := @rrel2_1.
-Instance getLt2 : forall {r : OrderRel2}, Lt r := @rrel2_2.
-
-Class Adder A := adder : law A.
-Infix "+" := adder.
-Class AdderMag := addermag : magma.
-Instance getAdderMag : forall {G : AdderMag}, Adder G := @gop.
-
-Class Multer A := multer : law A.
-Infix "°" := multer (at level 40). (*level 40 is same as "*" *)
-Class MulterMag := multermag : magma.
-Instance getMulterMag : forall {G : MulterMag}, Multer G := @gop.
-
-Instance getAdderRPlus : forall {G : prering}, Adder G := @rplus.
-Instance getMulterRMult : forall {G : prering}, Multer G := @rmult.
-
-Ltac unfoldNota := unfold le,lt,apart,adder,multer;
-  unfold getLe,getLt,getApart,getLe2,getLt2,getAdderMag,getMulterMag,
-  getAdderRPlus,getMulterRMult.
-
-(***********  Testing  ******************)
-Lemma blob : forall r : prering, forall x y : r, rmult x y = multer x y.
-reflexivity. Defined.
-Lemma bb0 : (forall r : ApartRel, forall x y : r, rrel x y). Abort.
-Lemma bb : forall r : Relation, forall x y : r, rrel x y. Abort.
-Fail Lemma bb : (forall r : Relation, forall x y : r, x # y).
-Fail Lemma bb : (forall r : ApartR, forall x y, x < y).
-Lemma bb : forall r : OrderRel2, forall x y, x < y -> x <= y. Abort.
-Lemma test : forall r : RR, forall x y : r, rrel2_1 x y.
-intros. change OrderRel2 in r. change (x <= y). Abort.
-
-End AlgebraNotation.
-*)
