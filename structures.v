@@ -22,7 +22,31 @@ Note that we usually define pack_val' : forall G:base, IsFoo G -> ValueType G
 which simplifies to is_val yet works for theorems using pack_val
 *)
 
+Definition law T := T -> T -> T.
+Definition neq {T} : relation T := fun x y => ~ x=y.
+
+Module Symbols.
+(* Symbols for notations *)
+
+Class Plus  (T : Type) := plus  : law T.
+Class Mult  (T : Type) := mult  : law T.
+Class Leq   (T : Type) := leq   : relation T.
+Class Lt    (T : Type) := lt    : relation T.
+Class Apart (T : Type) := apart : relation T.
+
+Infix "+"  := plus.
+Infix "°"  := mult (at level 40). (* same as * *)
+(*Infix "*" := times.*) (*scalar/vector multiplication*)
+Infix "<=" := leq.
+Infix "<"  := lt.
+Infix "<>" := apart.
+Infix "!=" := neq (at level 70). (*same as <> *)
+
+End Symbols.
+
+
 Module Signatures.
+Export Symbols.
 
 (****************************************
 ************* MAGMA *********************
@@ -40,46 +64,55 @@ match G with | BuildMagma _ l => l end.
 
 Arguments gop {G} _ _ : simpl never.
 
-(*********** PRERING ******************)
-
-Record preringClass (T : Type) := BuildPreringC {
-prering_plusV : law T;
-prering_multV : law T
-}.
-
-Record prering := BuildPrering {
-rigcarr :> Type;
-rigC : preringClass rigcarr
-}.
-
-Definition makePrering : forall T : Type, law T -> law T -> prering
- := fun T pl ml => BuildPrering T (BuildPreringC _ pl ml).
-
-(* canonical structures? *)
-Canonical Structure prering_plus (G : prering) : magma :=
-BuildMagma G (prering_plusV _ (rigC G)).
-Canonical Structure prering_mult (G : prering) : magma :=
-BuildMagma G (prering_multV _ (rigC G)).
-
-Definition rplus {G : prering} : law G := @gop (prering_plus G).
-Definition rmult {G : prering} : law G := @gop (prering_mult G).
-
 (*
-NB: never access the laws in a prering directly if you can at all avoid it.
-Instead use prering_plus or rplus (depending on which you need)
-That way results on magmas are immediately usable
-
-Same thing for other compound structures eg ordered magmas, etc
+NB: the following notations can still be used in some cases even if the magma isn't given as PlusMagma/MultMagma
+ex:
+Lemma bb : forall G : magma, forall x y : G, x+y = x.
 *)
 
+Definition PlusMagma := magma.
+Instance PlusMag_Op : forall G : PlusMagma, Plus G := @gop.
+
+Definition MultMagma := magma.
+Instance MultMag_Op : forall G : MultMagma, Mult G := @gop.
+
+
+
+(*********** PRERING ******************)
+
+Record LL_Class (T : Type) := BuildLL_Class {
+LL_c_L1 : law T;
+LL_c_L2 : law T
+}.
+
+Record LL_sig := BuildLL_sig {
+LL_carr :> Type;
+LL_class : LL_Class LL_carr
+}.
+
+Notation prering := LL_sig.
+
+Definition makePrering : forall T : Type, law T -> law T -> prering
+ := fun T pl ml => BuildLL_sig T (BuildLL_Class _ pl ml).
+
+(* canonical structures? *)
+Definition prering_plus (G : prering) : PlusMagma :=
+BuildMagma G (LL_c_L1 _ (LL_class G)).
+Definition prering_mult (G : prering) : MultMagma :=
+BuildMagma G (LL_c_L2 _ (LL_class G)).
+
+Instance rplus {G : prering} : Plus G := @gop (prering_plus G).
+Instance rmult {G : prering} : Mult G := @gop (prering_mult G).
+
+(*
+we take care to go through gop so that properties on magmas still work
+this is expecially useful once we have properties on the specific magmas prering_plus and prering_mult
+*)
 
 (****************************************
 ************* RELATION ******************
 ****************************************)
 
-(*
-Definition relation T := T -> T -> Type.
-*)
 
 Record Relation := BuildRelation {
 relcarr :> Type;
@@ -91,33 +124,21 @@ match R with | BuildRelation _ r => r end.
 
 Arguments rrel {_} _ _ : simpl never.
 
-(*
-Axiom blob : forall R : Relation, forall x y : R, rrel x y.
+Definition ApartRelation := Relation.
+Definition LeqRelation := Relation.
+Definition LtRelation := Relation.
 
-Lemma blob_use : forall T : Type, forall x y : T, x=y.
-intros. apply (blob _ x y).
-Abort.
-*)
+Instance ApartRel_Op : forall R : ApartRelation, Apart R := @rrel.
+Instance LeqRel_Op : forall R : LeqRelation, Leq R := @rrel.
+Instance LtRel_Op : forall R : LtRelation, Lt R := @rrel.
 
-(*
-Generic naming scheme when there isn't a default meaning:
-X is a word made of R and L, R standing for relation and L for law
-relations come after laws
-  eg for prering, X = LL, for ordered ring, X = LLR
-then we have X_Class (T : Type) a record with projections
-  projection names are X_c_xn where x is L or R and n is the index of the law/rel starting from 1
-  n is omitted if only one law/rel in signature
-  eg for ordered ring we have LLR_Vlaw1, LLR_Vlaw2 and LLR_Vrel
-  (should be used as little as possible)
-then X_sig := BuildX_sig { X_carr :> Type; X_class : X_Class X_carr }
-
-finally we define (?name? like prering_plus and prering_mult)
-X_to_Y where Y selects letters from X. eg LLR_to_L1R, LLR_to_L2R, LLR_to_R, etc
-(only when deemed useful)
-and functions X_xn (only useful when multiple laws (relations), otherwise canonical structures pick it up using gop/rrel)
-*)
 
 (******************* 2 Relations ***************)
+
+(*
+Used for apart + lt
+In general we put apart before leq before lt in signatures
+*)
 
 Record RR_Class (T : Type) := BuildRR_Class {
 RR_c_R1 : relation T;
@@ -132,15 +153,51 @@ RR_class : RR_Class RR_carr
 Definition makeRR_sig : forall T : Type, relation T -> relation T -> RR_sig
  := fun T r1 r2 => BuildRR_sig T (BuildRR_Class _ r1 r2).
 
-Canonical Structure RR_to_R1 (R : RR_sig) : Relation :=
+Definition RR_to_R1 (R : RR_sig) : ApartRelation :=
 BuildRelation R (RR_c_R1 _ (RR_class R)).
-Canonical Structure RR_to_R2 (R : RR_sig) : Relation :=
+Definition RR_to_R2 (R : RR_sig) : LtRelation :=
 BuildRelation R (RR_c_R2 _ (RR_class R)).
 
-Definition RR_R1 {R : RR_sig} : relation R := @rrel (RR_to_R1 R).
-Definition RR_R2 {R : RR_sig} : relation R := @rrel (RR_to_R2 R).
+Instance RR_R1 {R : RR_sig} : Apart R := @rrel (RR_to_R1 R).
+Instance RR_R2 {R : RR_sig} : Lt R := @rrel (RR_to_R2 R).
+
+(******************* 3 Relations ****************)
+
+(*
+apart, leq, lt
+*)
+
+Record RRR_Class (T : Type) := BuildRRR_Class {
+RRR_c_R1 : relation T;
+RRR_c_R2 : relation T;
+RRR_c_R3 : relation T
+}.
+
+Record RRR_sig := BuildRRR_sig {
+RRR_carr :> Type;
+RRR_class : RRR_Class RRR_carr
+}.
+
+Definition RRR_to_R1 (R : RRR_sig) : ApartRelation :=
+BuildRelation R (RRR_c_R1 _ (RRR_class R)).
+Definition RRR_to_R2 (R : RRR_sig) : LeqRelation :=
+BuildRelation R (RRR_c_R2 _ (RRR_class R)).
+Definition RRR_to_R3 (R : RRR_sig) : LtRelation :=
+BuildRelation R (RRR_c_R3 _ (RRR_class R)).
+
+Definition RRR_to_R1R3 (R : RRR_sig) : RR_sig :=
+BuildRR_sig R (BuildRR_Class R (RRR_c_R1 R (RRR_class R))
+                               (RRR_c_R3 R (RRR_class R))).
+
+Instance RRR_R1 {R : RRR_sig} : Apart R := @rrel (RRR_to_R1 R).
+Instance RRR_R2 {R : RRR_sig} : Leq R := @rrel (RRR_to_R2 R).
+Instance RRR_R3 {R : RRR_sig} : Lt R := @rrel (RRR_to_R3 R).
 
 (***************** LR ***********************)
+
+(*
+Both law and relation have no single default meaning
+*)
 
 Record LR_Class (T : Type) := BuildLR_Class {
 LR_c_L : law T;
@@ -163,11 +220,6 @@ Canonical Structure LR_to_R (G : LR_sig) : Relation :=
 BuildRelation G (LR_c_R _ (LR_class G)).
 Coercion LR_to_R : LR_sig >-> Relation.
 
-(* example of why we don't need LR_L or LR_R *)
-(*
-Check (forall G : LR_sig, forall x y z : G, rrel (gop y z) x).
-*)
-
 (******************* LLR ***********************)
 
 Record LLR_Class (T : Type) := BuildLLR_Class {
@@ -185,8 +237,8 @@ Definition makeLLR_sig : forall T : Type, law T -> law T -> relation T -> LLR_si
  := fun T pl ml rel => BuildLLR_sig T (BuildLLR_Class _ pl ml rel).
 
 Canonical Structure LLR_to_LL (G : LLR_sig) : prering :=
-BuildPrering G (BuildPreringC _ (LLR_c_L1 _ (LLR_class G))
-                                (LLR_c_L2 _ (LLR_class G))).
+BuildLL_sig G (BuildLL_Class _ (LLR_c_L1 _ (LLR_class G))
+                               (LLR_c_L2 _ (LLR_class G))).
 Coercion LLR_to_LL : LLR_sig >-> prering.
 
 Canonical Structure LLR_to_R (G : LLR_sig) : Relation :=
@@ -194,20 +246,60 @@ BuildRelation G (LLR_c_R _ (LLR_class G)).
 Coercion LLR_to_R : LLR_sig >-> Relation.
 
 (*not coercions: would be ambiguous*)
-Canonical Structure LLR_to_L1R (G : LLR_sig) : LR_sig :=
+Definition LLR_to_L1R (G : LLR_sig) : LR_sig :=
 BuildLR_sig G (BuildLR_Class _ (LLR_c_L1 _ (LLR_class G))
                                (LLR_c_R _ (LLR_class G))).
-Canonical Structure LLR_to_L2R (G : LLR_sig) : LR_sig :=
+Definition LLR_to_L2R (G : LLR_sig) : LR_sig :=
 BuildLR_sig G (BuildLR_Class _ (LLR_c_L2 _ (LLR_class G))
                                (LLR_c_R _ (LLR_class G))).
 
+(****************** LLRR *******************)
+
 (*
-Lemma blob : forall G : LLR_sig, forall a b c d : G,
- rrel ((rplus a b):G) (rmult c d).
-Proof.
-simpl. (*gets rid of the :G*)
-Abort.
+relations are apartness + lt
 *)
+
+Record LLRR_Class (T : Type) := BuildLLRR_Class {
+LLRR_L1 : law T;
+LLRR_L2 : law T;
+LLRR_R1 : relation T;
+LLRR_R2 : relation T
+}.
+
+Record LLRR_sig := BuildLLRR_sig {
+LLRR_carr :> Type;
+LLRR_class : LLRR_Class LLRR_carr
+}.
+
+Definition makeLLRR_sig T pl ml r1 r2
+ := BuildLLRR_sig T (BuildLLRR_Class T pl ml r1 r2).
+
+Canonical Structure LLRR_to_LL (G : LLRR_sig) : prering :=
+BuildLL_sig G (BuildLL_Class _ (LLRR_L1 _ (LLRR_class G))
+                               (LLRR_L2 _ (LLRR_class G))).
+Coercion LLRR_to_LL : LLRR_sig >-> prering.
+
+
+Canonical Structure LLRR_to_RR (G : LLRR_sig) : RR_sig :=
+BuildRR_sig G (BuildRR_Class _ (LLRR_R1 _ (LLRR_class G))
+                               (LLRR_R2 _ (LLRR_class G))).
+Coercion LLRR_to_RR : LLRR_sig >-> RR_sig.
+
+Definition LLRR_to_L1R1 (G : LLRR_sig) : LR_sig :=
+BuildLR_sig G (BuildLR_Class _ (LLRR_L1 _ (LLRR_class G))
+                               (LLRR_R1 _ (LLRR_class G))).
+
+Definition LLRR_to_L1R2 (G : LLRR_sig) : LR_sig :=
+BuildLR_sig G (BuildLR_Class _ (LLRR_L1 _ (LLRR_class G))
+                               (LLRR_R2 _ (LLRR_class G))).
+
+Definition LLRR_to_L2R1 (G : LLRR_sig) : LR_sig :=
+BuildLR_sig G (BuildLR_Class _ (LLRR_L2 _ (LLRR_class G))
+                               (LLRR_R1 _ (LLRR_class G))).
+
+Definition LLRR_to_L2R2 (G : LLRR_sig) : LR_sig :=
+BuildLR_sig G (BuildLR_Class _ (LLRR_L2 _ (LLRR_class G))
+                               (LLRR_R2 _ (LLRR_class G))).
 
 (****************** LLRRR *******************)
 
@@ -232,145 +324,24 @@ Definition makeLLRRR_sig T pl ml r1 r2 r3
  := BuildLLRRR_sig T (BuildLLRRR_Class T pl ml r1 r2 r3).
 
 Canonical Structure LLRRR_to_LL (G : LLRRR_sig) : prering :=
-BuildPrering G (BuildPreringC _ (LLRRR_L1 _ (LLRRR_class G))
+BuildLL_sig G (BuildLL_Class _ (LLRRR_L1 _ (LLRRR_class G))
                                  (LLRRR_L2 _ (LLRRR_class G))).
 Coercion LLRRR_to_LL : LLRRR_sig >-> prering.
 
-Canonical Structure LLRRR_to_LLR1 (G : LLRRR_sig) : LLR_sig :=
-BuildLLR_sig G (BuildLLR_Class _ (LLRRR_L1 _ (LLRRR_class G))
-                                 (LLRRR_L2 _ (LLRRR_class G))
-                                 (LLRRR_R1 _ (LLRRR_class G))).
-Canonical Structure LLRRR_to_LLR2 (G : LLRRR_sig) : LLR_sig :=
-BuildLLR_sig G (BuildLLR_Class _ (LLRRR_L1 _ (LLRRR_class G))
-                                 (LLRRR_L2 _ (LLRRR_class G))
-                                 (LLRRR_R2 _ (LLRRR_class G))).
-Canonical Structure LLRRR_to_LLR3 (G : LLRRR_sig) : LLR_sig :=
-BuildLLR_sig G (BuildLLR_Class _ (LLRRR_L1 _ (LLRRR_class G))
-                                 (LLRRR_L2 _ (LLRRR_class G))
-                                 (LLRRR_R3 _ (LLRRR_class G))).
 
-Canonical Structure LLRRR_to_R1R2 (G : LLRRR_sig) : RR_sig :=
-BuildRR_sig G (BuildRR_Class _   (LLRRR_R1 _ (LLRRR_class G))
+Canonical Structure LLRRR_to_RRR (G : LLRRR_sig) : RRR_sig :=
+BuildRRR_sig G (BuildRRR_Class _ (LLRRR_R1 _ (LLRRR_class G))
+                                 (LLRRR_R2 _ (LLRRR_class G))
                                  (LLRRR_R2 _ (LLRRR_class G))).
+Coercion LLRRR_to_RRR : LLRRR_sig >-> RRR_sig.
 
-(*
-Lemma test : forall G : LLRRR_sig, forall a b : G, rplus a b = rmult a b.
-Abort.
-*)
+Definition LLRRR_to_LLR1R3 (G : LLRRR_sig) : LLRR_sig :=
+BuildLLRR_sig G (BuildLLRR_Class G (LLRRR_L1 _ (LLRRR_class G))
+                                   (LLRRR_L2 _ (LLRRR_class G))
+                                   (LLRRR_R1 _ (LLRRR_class G))
+                                   (LLRRR_R3 _ (LLRRR_class G))).
 
 End Signatures.
-
-
-
-Module AlgebraNotation.
-Export Signatures.
-
-Class PlusOp (A : Type) := plus : law A.
-
-Infix "+" := plus.
-
-Ltac foldPlusOp op := change op with (@plus _ op).
-
-Definition AdditiveMagma := magma.
-
-Instance AddMag_PlusOp : forall G : AdditiveMagma, PlusOp G := @gop.
-
-Ltac foldAddMag G := change (@gop G) with (@plus _ (AddMag_PlusOp G)).
-
-
-Class MultOp (A : Type) := mult : law A.
-
-Infix "°" := mult (at level 40).
-
-Ltac foldMultOp op := change op with (@mult _ op).
-
-Definition MultiplicativeMagma := magma.
-
-Instance MultMag_MultOp : forall G : MultiplicativeMagma, MultOp G
- := @gop.
-
-Ltac foldMultMag G := change (@gop G) with (@mult _ (MultMag_MultOp G)).
-
-Instance Prering_PlusOp : forall G : prering, PlusOp G := @rplus.
-Instance Prering_MultOp : forall G : prering, MultOp G := @rmult.
-
-Ltac foldAddPrering G := change (@rplus G) with (@plus _ (Prering_PlusOp G)).
-Ltac foldMultPrering G := change (@rmult G) with (@mult _ (Prering_MultOp G)).
-Ltac foldPreringOps G := foldAddPrering G; foldMultPrering G.
-
-(*
-Lemma blob : forall G : prering, forall x y z: G, x ° (y+z) = (x°y) + x°z.
-Lemma blob' : forall G : LLR_sig, forall x y : G, x ° y = rmult x y.
-intros. foldPreringOps G.
-Lemma blob'' : forall G : prering, forall x y : G, rplus x y = rmult y x.
-intros. foldPreringOps G.
-*)
-
-
-Class LeqOp (A : Type) := leq : relation A.
-
-Infix "<=" := leq.
-
-Ltac foldLeqOp op := change op with (@leq _ op).
-
-Definition LeqRelation := Relation.
-
-Instance LeqRel_LeqOp : forall R : LeqRelation, LeqOp R := @rrel.
-
-Ltac foldLeqRel R := change (@rrel R) with (@leq _ (LeqRel_LeqOp R)).
-
-
-Class LtOp (A : Type) := lt : relation A.
-
-Infix "<" := lt.
-
-Ltac foldLtOp op := change op with (@lt _ op).
-
-Definition LtRelation := Relation.
-
-Instance LtRel_LtOp : forall R : LtRelation, LtOp R := @rrel.
-
-Ltac foldLtRel R := change (@rrel R) with (@lt _ (LtRel_LtOp R)).
-
-
-Definition OrderPair_sig := RR_sig.
-
-Instance Order2_LeqOp : forall R : OrderPair_sig, LeqOp R := @RR_R1.
-Instance Order2_LtOp : forall R : OrderPair_sig, LtOp R := @RR_R2.
-
-Ltac foldOrderLeq R := change (@RR_R1 R) with (@leq _ (Order2_LeqOp R)).
-Ltac foldOrderLt R := change (@RR_R2 R) with (@lt _ (Order2_LtOp R)).
-Ltac foldOrder2 R := foldOrderLeq R; foldOrderLt R.
-
-
-Class ApartOp (A : Type) := apart : relation A.
-
-Infix "<>" := apart.
-
-Ltac foldApartOp op := change op with (@apart _ op).
-
-Definition ApartRelation := Relation.
-
-Instance ApartRel_ApartOp : forall R : ApartRelation, ApartOp R := @rrel.
-
-Ltac foldApartRel R := change (@rrel R) with (@apart _ (ApartRel_ApartOp R)).
-
-
-Definition prefield := LLR_sig.
-
-Instance Prefield_ApartOp : forall F : prefield, ApartOp F := @rrel.
-
-Ltac foldPrefieldApart F := change (@rrel F) with
-   (@apart _ (Prefield_ApartOp F)).
-
-(*
-Lemma blob : forall F : prefield, forall x y : F, x+y <> x°y.
-*)
-
-End AlgebraNotation.
-
-
-
 
 
 Module Magma.
@@ -534,9 +505,9 @@ Class IsMorphism {G H : magma} (f : G -> H)
 
 End Magma.
 
-Module Related.
+Module Relation.
 Export Signatures.
-Import AlgebraNotation.
+
 
 Class RelationProp (r : Relation) :=
  Relationprop : forall x y : r, IsHProp (rrel x y).
@@ -569,12 +540,9 @@ order_refl :> IsReflexive R;
 order_antisymm :> IsAntisymmetric R
 }.
 
-Class IsStrictLinear (R : Relation) := 
- isstrictlinear : forall x y : R, rrel x y -> forall z,
-   minus1Trunc (rrel x z \/ rrel z y).
-
-Class IsCotransitive (R : Relation) := 
- iscotrans :> IsStrictLinear R.
+Class IsCotransitive (R : LtRelation) := 
+ iscotransitive : forall x y : R, x < y -> forall z,
+   minus1Trunc (x < z \/ z < y).
 
 Class IsApartness (R : ApartRelation) := BuildIsApartness {
 apart_irrefl :> IsIrreflexive R;
@@ -589,25 +557,17 @@ Class IsLinear (R : LeqRelation) :=
 Class IsConstrLinear (R : LeqRelation) := 
  isconstrlinear : forall x y : R, x <= y \/ y <= x.
 
-Class IsConstrStrictLinear (R : Relation) := isconstrstrictlinear
- : forall x y : R, rrel x y -> forall z, rrel x z \/ rrel z y.
+Class IsConstrCotransitive (R : LtRelation) := isconstrcotransitive
+ : forall x y : R, x < y -> forall z, x < z \/ z < y.
 
 Class IsDecidable (R : Relation) := 
  isdecidable : forall x y : R, (rrel x y)+(~rrel x y).
 
-Class IsStrictPoset (R : LtRelation) := BuildIsStrictPoset {
+Class IsStrictOrder (R : LtRelation) := BuildIsStrictPoset {
 strictposet_irrefl :> IsIrreflexive R;
 strictposet_trans :> IsTransitive R
 }.
 
-Class IsTight (r : RR_sig) :=
- istight : forall x y : r, RR_R1 x y <-> ~ RR_R2 y x.
-
-Class IsPoset2 (r : OrderPair_sig) := BuildIsPoset2 {
-poset2_1 :> IsPoset (RR_to_R1 r);
-poset2_2 :> IsStrictPoset (RR_to_R2 r);
-poset2_tight :> IsTight r
-}.
 
 Class IsUpper (r : LeqRelation) (P : r -> Type) (m : r) := 
 isupper : forall x, P x -> x <= m.
@@ -698,6 +658,34 @@ constrtotalorder_is_poset :> IsPoset r;
 constrtotalorder_linear :> IsConstrLinear r
 }.
 
+
+(*
+In classical logic we can construct a strict order from a poset (resp poset from strict order) by taking x<y iff x<=y and x<>y (resp x<=y if x<y or x=y)
+In constructive logic the inequality becomes apartness and the two iffs are not equivalent (2nd is stronger from its \/)
+We end up using the first one.
+cf math classes for working example (src/interfaces/orders.v > FullPartialOrder)
+*)
+
+Class IsPseudoOrder (R : RR_sig) := BuildIsPseudoOrder {
+pseudoorder_is_apart :> IsApartness (RR_to_R1 R);
+pseudoorder_is_antisym : forall x y : R, x<y -> y<x -> Empty;
+pseudoorder_is_cotrans :> IsCotransitive (RR_to_R2 R);
+pseudoorder_iff : forall x y : R, x <> y <-> (x<y \/ y<x)
+}.
+
+Class IsFullPartialOrder (R : RRR_sig) := BuildIsFullPartialOrder {
+fullpartial_is_apart :> IsApartness (RRR_to_R1 R);
+fullpartial_is_poset :> IsPoset (RRR_to_R2 R);
+fullpartial_is_trans :> IsTransitive (RRR_to_R3 R);
+lt_iff_le_apart : forall x y : R, x < y <-> (x <= y /\ x <> y)
+}.
+
+Class FullPseudoOrder (R : RRR_sig) := BuildIsFullPseudoOrder {
+fullpseudoorder_is_pseudo :> IsPseudoOrder (RRR_to_R1R3 R);
+le_iff_not_lt_flip : forall x y : R, x <= y <-> ~ y < x
+}.
+
+
 Class IsMorphism {r r' : Relation} (f : r -> r')
  := ismorphism : forall x y : r, rrel x y -> rrel (f x) (f y).
 Class IsReflecting {r r' : Relation} (f : r -> r')
@@ -714,12 +702,13 @@ Class IsBinReflecting {r1 r2 r' : Relation} (f : r1 -> r2 -> r')
  := isbinreflecting : forall x x' y y', rrel (f x y) (f x' y')
    -> minus1Trunc (rrel x x' \/ rrel y y').
 
-End Related.
+End Relation.
 
 Module OrderedMagma.
 Export Magma.
-Export Related.
+Export Relation.
 
+(* LInvariant: forall z x y, x <= y -> z x <= z y *)
 Class IsLInvariant (G : LR_sig)
  := islcompat :> forall z : G, IsMorphism ((gop z):G->G).
 Class IsRInvariant (G : LR_sig)
@@ -729,8 +718,10 @@ invariant_left :> IsLInvariant G;
 invariant_right :> IsRInvariant G
 }.
 
+(* Compat: forall x x' y y', x <= x', y <= y' -> x + y <= x' + y' *)
 Class IsCompat (G : LR_sig) := iscompat :> IsBinMorphism ((@gop G):law G).
 
+(* LRegular a: forall x y, a x <= a y -> x <= y *)
 Class IsLRegular (G : LR_sig) (a : G) :=
  islregular :> IsReflecting ((gop a):G->G).
 Class IsRRegular (G : LR_sig) (a : G) :=
@@ -740,6 +731,7 @@ isreg_left :> IsLRegular G a;
 isreg_right :> IsRRegular G a
 }.
 
+(* BinRegular : forall x x' y y', x+y <= x'+y' -> x<=x' or y<=y' *)
 Class IsBinRegular (G : LR_sig) :=
  isbinregular :> IsBinReflecting ((@gop G):law G).
 (*
@@ -750,7 +742,7 @@ and embedding for < for a > 0
 End OrderedMagma.
 
 Module Ring.
-Export Magma AlgebraNotation.
+Export Magma.
 
 (*
 Infix "+" := (@rplus _).
@@ -810,8 +802,8 @@ r_opp : forall x : G, @Inverse (prering_plus G) x
 }.
 
 Record ring := BuildRing {
-ring_mag2 :> prering;
-ring_is_ring :> IsRing ring_mag2
+ring_prering :> prering;
+ring_is_ring :> IsRing ring_prering
 }.
 
 Canonical Structure is_ring_ring {G : prering} {Hr : IsRing G}
@@ -820,7 +812,7 @@ Canonical Structure is_ring_ring {G : prering} {Hr : IsRing G}
 Existing Instance ring_is_ring.
 
 Instance ring_is_group : forall (G : prering) {Hr : IsRing G},
- IsGroup (prering_plus G) := fun G Hr => BuildIsGroup _ _ r_opp.
+ IsGroup (prering_plus G) := fun G Hr => BuildIsGroup (prering_plus G) _ r_opp.
 
 Canonical Structure ring_group : ring -> group
  := fun G => BuildGroup _ (@ring_is_group G _).
@@ -840,9 +832,6 @@ Instance ropp_correct : forall (G : ring) x,
 
 Definition roppV {G : ring} : G -> G := fun x => @inverse_val _ _ (ropp x).
 Definition roppV' {G : prering} {Hg : IsRing G} : G -> G := roppV.
-
-Notation "x - y" := (rplus x (roppV y)).
-Notation "- x" := (roppV x).
 
 Class IsIntegralDomain (G : prering) := BuildIsIntegralDomain {
 integral_ring :> IsRing G;
@@ -872,7 +861,7 @@ Coercion intdom_ring : integralDomain >-> ring.
 End Ring.
 
 Module Lattice.
-Export Ring Related OrderedMagma.
+Export Ring Relation OrderedMagma.
 
 Class IsIdempotent (G : magma) := isidempotent :> forall x : G, gop x x = x.
 
@@ -921,7 +910,7 @@ End Lattice.
 
 Module Field.
 Export Ring.
-Export Related.
+Export Relation.
 Export OrderedMagma.
 
 Notation "'prefield'" := LLR_sig : field_scope.
@@ -1002,4 +991,49 @@ Definition finvV' {F} {Hf : IsField F} : forall x : F, rrel x ZeroV ->
 
 
 End Field.
+
+Module OrderedRing_UNFINISHED.
+Export Ring Relation OrderedMagma.
+
+Class IsPosPreserving (G : LR_sig)
+ := ispospreserving : forall zero : Identity G, 
+      forall x y : G, identity_val zero <= x -> identity_val zero <= y 
+           -> identity_val zero <= x°y.
+
+Class IsSemiringOrder (G : LLR_sig) := BuildIsSemiringOrder {
+srorder_po :> IsPoset G;
+srorder_partial_minus : forall x y : G, x <= y -> exists z, y = x + z;
+srorder_plus :> forall z : G, IsEmbedding (plus z);
+nonneg_mult_compat :> IsPosPreserving (LLR_to_L2R G)
+}.
+
+Class IsStrictSemiringOrder (G : LLRR_sig) := BuildIsStrictSemiringOrder {
+strict_srorder_so :> IsStrictOrder (RR_to_R2 G);
+strict_srorder_partial_minus : forall x y : G, x < y -> exists z, y = x + z;
+strict_srorder_plus :> forall z : G,
+       @IsEmbedding (RR_to_R2 G) (RR_to_R2 G) (plus z);
+pos_mult_compat :> IsPosPreserving (LLRR_to_L2R2 G)
+}.
+
+Class IsPseudoSemiringOrder (G : LLRR_sig) := BuildIsPseudoSemiringOrder {
+pseudo_srorder_strict :> IsPseudoOrder G;
+pseudo_srorder_partial_minus : forall x y : G, ~y < x -> exists z, y = x + z;
+pseudo_srorder_plus :> forall z : G,
+        @IsEmbedding (RR_to_R2 G) (RR_to_R2 G) (plus z);
+pseudo_srorder_mult_ext :> IsBinRegular (LLRR_to_L2R1 G);
+pseudo_srorder_pos_mult_compat :> IsPosPreserving (LLRR_to_L2R2 G)
+}.
+
+Class FullPseudoSemiringOrder (G : LLRRR_sig) :=
+  BuildIsFullPseudoSemiringOrder {
+full_pseudo_srorder_pso :> IsPseudoSemiringOrder (LLRRR_to_LLR1R3 G);
+full_pseudo_srorder_le_iff_not_lt_flip : forall x y : G, x <= y <-> ~y < x
+}.
+
+
+
+End OrderedRing.
+
+
+
 
