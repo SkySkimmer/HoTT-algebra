@@ -992,7 +992,7 @@ Definition finvV' {F} {Hf : IsField F} : forall x : F, rrel x ZeroV ->
 
 End Field.
 
-Module OrderedRing_UNFINISHED.
+Module OrderedRing.
 Export Ring Relation OrderedMagma.
 
 Class IsPosPreserving (G : LR_sig)
