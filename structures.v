@@ -510,8 +510,7 @@ Export Signatures.
 
 
 Class RelationProp (r : Relation) :=
- Relationprop : forall x y : r, IsHProp (rrel x y).
-Existing Instance Relationprop.
+ relationprop :> forall x y : r, IsHProp (rrel x y).
 
 Class IsMereRelator (r : Relation) := BuildIsMereRelator {
 mereRelation_is_set :> IsHSet r;
@@ -540,9 +539,10 @@ order_refl :> IsReflexive R;
 order_antisymm :> IsAntisymmetric R
 }.
 
-Class IsCotransitive (R : LtRelation) := 
- iscotransitive : forall x y : R, x < y -> forall z,
-   minus1Trunc (x < z \/ z < y).
+(*NB: do not use < here, it becomes ambiguous when used with an apartness relation*)
+Class IsCotransitive (R : Relation) := 
+ iscotransitive : forall x y : R, rrel x y -> forall z,
+   minus1Trunc (rrel x z \/ rrel z y).
 
 Class IsApartness (R : ApartRelation) := BuildIsApartness {
 apart_irrefl :> IsIrreflexive R;
@@ -563,9 +563,9 @@ Class IsConstrCotransitive (R : LtRelation) := isconstrcotransitive
 Class IsDecidable (R : Relation) := 
  isdecidable : forall x y : R, (rrel x y)+(~rrel x y).
 
-Class IsStrictOrder (R : LtRelation) := BuildIsStrictPoset {
-strictposet_irrefl :> IsIrreflexive R;
-strictposet_trans :> IsTransitive R
+Class IsStrictOrder (R : LtRelation) := BuildIsStrictOrder {
+strictorder_irrefl :> IsIrreflexive R;
+strictorder_trans :> IsTransitive R
 }.
 
 
@@ -670,17 +670,17 @@ Class IsPseudoOrder (R : RR_sig) := BuildIsPseudoOrder {
 pseudoorder_is_apart :> IsApartness (RR_to_R1 R);
 pseudoorder_is_antisym : forall x y : R, x<y -> y<x -> Empty;
 pseudoorder_is_cotrans :> IsCotransitive (RR_to_R2 R);
-pseudoorder_iff : forall x y : R, x <> y <-> (x<y \/ y<x)
+apart_iff_total_lt : forall x y : R, x <> y <-> (x<y \/ y<x)
 }.
 
-Class IsFullPartialOrder (R : RRR_sig) := BuildIsFullPartialOrder {
+Class IsFullPoset (R : RRR_sig) := BuildIsFullPartialOrder {
 fullpartial_is_apart :> IsApartness (RRR_to_R1 R);
 fullpartial_is_poset :> IsPoset (RRR_to_R2 R);
 fullpartial_is_trans :> IsTransitive (RRR_to_R3 R);
 lt_iff_le_apart : forall x y : R, x < y <-> (x <= y /\ x <> y)
 }.
 
-Class FullPseudoOrder (R : RRR_sig) := BuildIsFullPseudoOrder {
+Class IsFullPseudoOrder (R : RRR_sig) := BuildIsFullPseudoOrder {
 fullpseudoorder_is_pseudo :> IsPseudoOrder (RRR_to_R1R3 R);
 le_iff_not_lt_flip : forall x y : R, x <= y <-> ~ y < x
 }.

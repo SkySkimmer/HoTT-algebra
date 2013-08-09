@@ -2,8 +2,6 @@ Require Import HoTT FunextAxiom UnivalenceAxiom.
 Require Import unique_choice.
 Require Export structures.
 
-Import AlgebraNotation.
-
 Definition neq {T} : relation T := fun x y => ~ x=y.
 
 Instance iff_trans : Transitive iff.
@@ -81,13 +79,15 @@ apply trunc_forall.
 intros;apply trunc_forall.
 Defined.
 
-Lemma left_id_id : forall {G : semigroup} {e : G}, Left_id e -> IsId e.
+Lemma left_id_id : forall {G : magma} {Hg : Commutative G} (e : G),
+ Left_id e -> IsId e.
 Proof.
-intros ? ? X. split;auto.
+intros ? ? ? X. split;auto.
 intro.
-eapply concat. apply sg_comm. apply X.
+eapply concat. apply commutative. apply X.
 Defined.
 
+(*
 (*
 Proof of concept: we can go between IsSemigroup and semigroup easily
 *)
@@ -101,6 +101,7 @@ Lemma left_id_id'' : forall {G : semigroup} (e : G), Left_id e -> IsId e.
 Proof.
 intros G. apply left_id_id'. apply _.
 Defined.
+*)
 
 Definition identity_sig : forall G : magma, sigT (@IsId G) <~> Identity G.
 Proof.
@@ -169,13 +170,13 @@ apply _.
 Defined.
 
 Lemma linverse_eq_gid : forall {G : monoid} {x y : G} {Hinv : Linverse x y},
-gop x y = gid.
+gop x y = gidV.
 Proof.
 intros. apply id_unique;apply _.
 Defined.
 
 Lemma rinverse_eq_gid : forall {G : monoid} {x y : G} {Hinv : Rinverse x y},
-gop y x = gid.
+gop y x = gidV.
 Proof.
 intros;apply id_unique;apply _.
 Defined.
@@ -277,7 +278,7 @@ apply path_sigma with (inverse_unicity _ _ _ _ _). apply isinverse_prop.
 Defined.
 
 Lemma group_inverse_gopp : forall {G : group}, forall x y : G,
- @IsInverse G x y -> @paths G (gopp x) y.
+ @IsInverse G x y -> @paths G (goppV x) y.
 Proof.
 intros. 
 apply (@inverse_unicity G _) with x.
@@ -285,19 +286,19 @@ apply (@inverse_unicity G _) with x.
  assumption.
 Defined.
 
-Lemma gopp_gopp : forall {G : group} (x : G), @paths G (gopp (gopp x)) x.
+Lemma gopp_gopp : forall {G : group} (x : G), @paths G (goppV (goppV x)) x.
 Proof.
 intros. apply group_inverse_gopp.
 apply inverse_symm. apply gopp_correct.
 Defined.
 
-Instance gid_isinverse : forall G : monoid, @IsInverse G gid gid.
+Instance gid_isinverse : forall G : monoid, @IsInverse G gidV gidV.
 Proof.
 intros.
 split;red;(apply transport with gidV;[symmetry;apply gid|]);apply _.
 Defined.
 
-Lemma gopp_gid : forall G : group, @paths G (gopp gid) gid.
+Lemma gopp_gid : forall G : group, @paths G (gopp gidV) gidV.
 Proof.
 intros. apply group_inverse_gopp. apply _.
 Defined.
@@ -348,6 +349,13 @@ intros. apply group_inverse_gopp.
 apply isinverse_gop;apply _.
 Defined.
 
+Lemma gopp_cop_comm : forall G : group, forall x y : G,
+ @paths G (gopp (gop x y)) (gop (gopp x) (gopp y)).
+Proof.
+intros;path_via (gop (gopp y) (gopp x)).
+apply gopp_gop. apply commutative.
+Defined.
+
 Instance gopp_prop : forall (G : monoid) {Hset : IsHSet G},
  IsHProp (forall x : G, Inverse x).
 Proof.
@@ -373,25 +381,25 @@ Defined.
 End Magma_pr.
 
 Module Related_pr.
-Export Related.
+Export Relation.
 Import minus1Trunc.
 
 Instance istrans_prop : forall {r : Relation}
- {Hprop : forall x y : r, IsHProp (rrel x y)}, IsHProp (IsTransitive r).
+ {Hprop : RelationProp r}, IsHProp (IsTransitive r).
 Proof.
 intros.
 apply trunc_forall.
 Defined.
 
 Instance isrefl_prop : forall {r : Relation}
- {Hprop : forall x y : r, IsHProp (rrel x y)}, IsHProp (IsReflexive r).
+ {Hprop : RelationProp r}, IsHProp (IsReflexive r).
 Proof.
 intros.
 apply trunc_forall.
 Defined.
 
 Instance issymm_prop : forall {r : Relation}
- {Hprop : forall x y : r, IsHProp (rrel x y)}, IsHProp (IsSymmetric r).
+ {Hprop : RelationProp r}, IsHProp (IsSymmetric r).
 Proof.
 intros.
 apply trunc_forall.
@@ -406,7 +414,7 @@ intro r. issig (BuildIsEquivalence r) (@equivalence_refl r) (@equivalence_symm r
 Defined.
 
 Instance isequivalence_prop : forall {r : Relation}
- {Hprop : forall x y : r, IsHProp (rrel x y)}, IsHProp (IsEquivalence r).
+ {Hprop : RelationProp r}, IsHProp (IsEquivalence r).
 Proof.
 intros.
 eapply trunc_equiv'.
@@ -417,7 +425,7 @@ intro;apply _.
 Defined.
 
 Lemma irrefl_neq : forall {R} {Hr : IsIrreflexive R}, 
-  forall x y : R, rrel x y -> x = y -> Empty.
+  forall x y : R, rrel x y -> neq x y.
 Proof.
 intros ? ? ? ? ?. intros H. destruct H. apply Hr with x. assumption.
 Defined.
@@ -443,7 +451,7 @@ issig (BuildIsPoset r) (@order_trans r) (@order_refl r) (@order_antisymm r).
 Defined.
 
 Instance isposet_prop : forall {r : Relation} {Hset : IsHSet r}
- {Hprop : forall x y : r, IsHProp (rrel x y)}, IsHProp (IsPoset r).
+ {Hprop : RelationProp r}, IsHProp (IsPoset r).
 Proof.
 intros.
 eapply trunc_equiv'.
@@ -479,20 +487,20 @@ intro. apply @trunc_sigma. apply _.
 intro. apply trunc_forall.
 Defined.
 
-Lemma apart_prove_empty : forall {r : Relation} {Ha : IsApartness r}, 
-forall x y : r, (rrel x y -> Empty) -> (~x=y -> Empty).
+Lemma apart_from_neq : forall {r} {Ha : IsApartness r}, forall x y : r,
+~x=y -> ~ ~ x <> y.
 Proof.
-intros ? ? ? ? ? H.
-apply H. apply apart_tight. assumption.
+intros ? ? ? ? H ?.
+apply H;apply apart_tight. assumption.
 Defined.
 
-Lemma apart_prove_eq : forall {r : Relation} {Ha : IsApartness r}, 
+Lemma apart_prove_eq : forall {r} {Ha : IsApartness r},
 forall a b x y : r, (rrel x y -> a=b) -> (~x=y -> a=b).
 Proof.
 intros ? ? ? ? ? ? H H'.
 apply apart_tight. intro H0.
-assert (Hx : ~ ~ rrel x y).
-intro Hx. apply H'. apply apart_tight. assumption.
+assert (Hx : ~ ~ x <> y).
+apply apart_from_neq. assumption.
 apply Hx;clear Hx;intro Hx.
 eapply irrefl_neq. apply H0. auto.
 Defined.
@@ -513,87 +521,37 @@ Proof.
 intros. constructor; apply _.
 Defined.
 
-Definition isstrictposet_sig : forall r, sigT (fun _ : IsIrreflexive r => 
-IsTransitive r) <~> IsStrictPoset r.
+Definition isstrictorder_sig : forall r, sigT (fun _ : IsIrreflexive r => 
+IsTransitive r) <~> IsStrictOrder r.
 Proof.
-intros. issig (BuildIsStrictPoset r) (@strictposet_irrefl r)
-  (@strictposet_trans r).
+intros. issig (BuildIsStrictOrder r) (@strictorder_irrefl r)
+  (@strictorder_trans r).
 Defined.
 
-Instance isstrictposet_prop : forall {r : Relation}
- {Hp : forall x y : r, IsHProp (rrel x y)}, IsHProp (IsStrictPoset r).
+Instance isstrictorder_prop : forall {r : LtRelation}
+ {Hp : RelationProp r}, IsHProp (IsStrictOrder r).
 Proof.
 intros. eapply trunc_equiv'.
-apply isstrictposet_sig.
+apply isstrictorder_sig.
 apply @trunc_sigma. apply _. intros;apply _.
 Defined.
 
-Lemma strict_poset_antisymm : forall (r : Relation) {Hstrict : IsStrictPoset r}, 
-forall x y : r, rrel x y -> rrel y x -> Empty.
+Lemma strict_poset_antisymm : forall (r : LtRelation)
+ {Hstrict : IsStrictOrder r}, forall x y : r, x < y /\ y < x -> Empty.
 Proof.
-intros. destruct Hstrict as [Hirr Htrans].
+intros ? ? ? ? [? ?]. destruct Hstrict as [Hirr Htrans].
 apply Hirr with x;eauto.
 Defined.
 
-Instance strict_poset_disjunct_prop : forall (r : Relation)
- {Hp : forall x y : r, IsHProp (rrel x y)}
- {Hstrict : IsStrictPoset r}, forall x y : r, 
-  IsHProp (rrel x y \/ rrel y x).
+Instance strict_poset_disjunct_prop : forall (r : LtRelation)
+ {Hp : RelationProp r}
+ {Hstrict : IsStrictOrder r}, forall x y : r,
+  IsHProp (x < y \/ y < x).
 Proof.
 intros. apply hprop_allpath.
 intros [Hx|Hx] [Hy|Hy];try (apply ap;apply Hp).
-destruct (strict_poset_antisymm _ _ _ Hx Hy).
-destruct (strict_poset_antisymm _ _ _ Hx Hy).
-Defined.
-
-Lemma poset2_lt_le : forall {r : OrderPair_sig} {Hpo : IsPoset2 r} (x y : r), 
- x < y -> x <= y.
-Proof.
-intros. apply poset2_tight. red. apply strict_poset_antisymm.
-apply _. assumption.
-Defined.
-
-Lemma poset2_linear_le_lt_trans : forall {r : OrderPair_sig} 
-{Hpr : RelationProp (RR_to_R2 r)}
-{Hpo : IsPoset2 r}
-{Hlin : IsStrictLinear (RR_to_R2 r)}, 
-forall x y : r, x <= y -> forall z, y < z -> x < z.
-Proof.
-intros ? ? ? ? ? ? H ? H'.
-eapply minus1Trunc_rect_nondep;[|apply Hpr|apply Hlin;apply H'].
-intros [H0|H0];[|apply H0]. fold (@RR_to_R2 r) in H0.
-apply poset2_tight in H. destruct H;assumption.
-Defined.
-
-Lemma poset2_linear_lt_le_trans : forall {r : OrderPair_sig}
-{Hpr : RelationProp (RR_to_R2 r)}
-{Hpo : IsPoset2 r}
-{Hlin : IsStrictLinear (RR_to_R2 r)}, 
-forall x y : r, x < y -> forall z, y <= z -> x < z.
-Proof.
-intros ? ? ? ? ? ? H ? H'.
-eapply minus1Trunc_rect_nondep;[|apply Hpr|apply Hlin;apply H].
-intros [H0|H0];[apply H0|]. fold (@RR_to_R2 r) in H0.
-apply poset2_tight in H'. destruct H';assumption.
-Defined.
-
-Lemma apart_from_strict_poset : forall (r : RR_sig)
-{Hstrict : IsStrictPoset (RR_to_R2 r)} {Hlin : IsStrictLinear (RR_to_R2 r)},
-(forall x y : r, RR_R1 x y <-> (RR_R2 x y \/ RR_R2 y x)) ->
-(forall x y : r, ~ RR_R1 x y -> x=y) ->
-IsApartness (RR_to_R1 r).
-Proof.
-intros ? ? ? H ?;split.
-- intros x Hx.
-  apply H in Hx. destruct Hx as [Hx|Hx];eapply strictposet_irrefl;apply Hx.
-- intros x y H'. apply H in H';apply H.
-  destruct H';auto.
-- intros x y H' z.
-  apply H in H';destruct H' as [H'|H'];
-  apply Hlin in H';(eapply minus1Trunc_rect_nondep;
-  [ | apply minus1Trunc_is_prop |apply (H' z)]);intros [H0|H0];apply min1;
-  solve [left;apply H;auto | right;apply H;auto].
-- assumption.
+destruct (strict_poset_antisymm _ _ _ (Hx, Hy)).
+destruct (strict_poset_antisymm _ _ _ (Hx, Hy)).
 Defined.
 
 Lemma neq_irrefl : forall r : Relation, (forall x y : r, rrel x y -> ~ x=y) -> 
@@ -630,6 +588,205 @@ intros ? ? H.
 destruct (Hdec x y) as [?|n]. assumption.
 apply Hneq in n. destruct H;assumption.
 Defined.
+
+
+Section PseudoOrder.
+
+Context r {Hpr : RelationProp (RR_to_R2 r)} {Hpo : IsPseudoOrder r}.
+
+Lemma apart_total_lt (x y : r) : x <> y -> x < y \/ y < x.
+Proof.
+apply apart_iff_total_lt.
+Defined.
+
+Lemma pseudo_order_lt_apart (x y : r) : x < y -> x <> y.
+Proof.
+intros. apply apart_iff_total_lt. left;assumption.
+Defined.
+
+Lemma pseudo_order_lt_apart_flip (x y : r) : x < y -> y <> x.
+Proof.
+intros. apply apart_iff_total_lt. right;assumption.
+Defined.
+
+Lemma not_lt_apart_lt_flip (x y : r) : ~x < y -> x <> y -> y < x.
+Proof.
+intros H H'. apply apart_iff_total_lt in H'. destruct H';auto.
+destruct H;assumption.
+Defined.
+
+Lemma pseudo_order_cotrans_twice (x1 y1 x2 y2 : r)
+ : x1 < y1 -> minus1Trunc (x2 < y2 \/ x1 < x2 \/ y2 < y1).
+Proof.
+intros E1.
+pose (Htmp := iscotransitive _ _ E1 x2).
+clearbody Htmp. change (minus1Trunc ((x1 < x2) \/ (x2 < y1))) in Htmp.
+revert Htmp;apply minus1Trunc_rect_nondep;[|apply minus1Trunc_is_prop].
+intros [E2|E2].
+apply min1;auto.
+pose (Htmp := iscotransitive _ _ E2 y2). clearbody Htmp.
+revert Htmp;apply minus1Trunc_rect_nondep;[|apply minus1Trunc_is_prop].
+intros [E3|E3];apply min1; auto.
+Defined.
+
+Lemma pseudo_order_lt_ext (x1 y1 x2 y2 : r)
+ : x1 < y1 -> minus1Trunc (x2 < y2 \/ x1 <> x2 \/ y2 <> y1).
+Proof.
+intros E.
+pose (H := pseudo_order_cotrans_twice x1 y1 x2 y2 E). clearbody H;revert H.
+apply minus1Trunc_rect_nondep;[|apply minus1Trunc_is_prop].
+intros [?|[?|?]];apply min1; auto using pseudo_order_lt_apart.
+Defined.
+
+Global Instance pseudo_is_strict : IsStrictOrder (RR_to_R2 r).
+Proof.
+split.
+- intros x E. destruct pseudoorder_is_antisym with x x;assumption.
+- intros x y z E1 E2.
+  pose (Htmp := iscotransitive _ _ E1 z);clearbody Htmp;revert Htmp.
+  apply minus1Trunc_rect_nondep;[|apply Hpr]. intros [?|?].
+  assumption.
+  destruct pseudoorder_is_antisym with y z;auto.
+Defined.
+
+Global Instance pseudo_complement_trans : Transitive (fun x y : r => ~ x<y).
+Proof.
+intros x y z.
+intros E1 E2 E3.
+pose (Htmp := iscotransitive _ _ E3 y);clearbody Htmp;revert Htmp.
+apply minus1Trunc_rect_nondep;[|intros []].
+intros [?|?] ; contradiction.
+Defined.
+
+Global Instance pseudo_complement_antisym
+ : IsAntisymmetric (BuildRelation r (fun x y => ~ x < y)).
+Proof.
+red;simpl. (* warning: <= is complement < here! *)
+intros x y H H0.
+apply (@apart_tight (RR_to_R1 r) _).
+intro H';apply apart_iff_total_lt in H'. destruct H' as [H'|H'];auto.
+Defined.
+
+End PseudoOrder.
+
+
+Section FullPoset.
+
+Context r {Hpr : RelationProp (RRR_to_R1 r)} {Hpo : IsFullPoset r}.
+
+Lemma lt_le : forall x y : r, x < y -> x <= y.
+Proof.
+intros ? ? H.
+apply lt_iff_le_apart in H. apply H.
+Defined.
+
+Lemma lt_apart : forall (x y : r), x < y -> x <> y.
+Proof.
+intros ? ? H.
+apply lt_iff_le_apart in H. apply H.
+Defined.
+
+Lemma le_not_lt_flip : forall (x y : r), x <= y -> ~ y < x.
+Proof.
+intros ? ? H H'.
+apply lt_iff_le_apart in H'.
+destruct H' as [H0 H1].
+apply irrefl_neq in H1. apply H1.
+apply (@isantisymm (RRR_to_R2 r) _);assumption.
+Defined.
+
+Lemma lt_not_le_flip : forall (x y : r), x < y -> ~ y <= x.
+Proof.
+intros ? ? H H'.
+apply lt_iff_le_apart in H.
+destruct H as [H0 H1].
+apply irrefl_neq in H1. apply H1.
+apply (@isantisymm (RRR_to_R2 r) _);assumption.
+Defined.
+
+Lemma lt_le_trans : forall x y : r, x < y ->
+ forall z, y <= z -> x < z.
+Proof.
+intros ? ? H ? H'.
+apply lt_iff_le_apart in H. destruct H as [H0 H1].
+apply lt_iff_le_apart. split.
+- eapply istrans. apply H0. apply H'.
+- pose (H := apart_cotrans _ _ H1 z). clearbody H.
+  change (minus1Trunc ((x<>z) + (z<>y))) in H.
+  revert H. apply minus1Trunc_rect_nondep;[|apply Hpr].
+  intros [H|H]. assumption.
+  apply lt_apart. apply issymm in H.
+  apply (@istrans (RRR_to_R3 r) _ _ y);apply lt_iff_le_apart;split;auto.
+Defined.
+
+Lemma le_lt_trans : forall x y : r, x <= y -> forall z, y < z -> x < z.
+Proof.
+intros ? ? H ? H'.
+apply lt_iff_le_apart in H';apply lt_iff_le_apart.
+destruct H' as [H0 H1];split.
+- eapply istrans;[apply H|apply H0].
+- pose (H' := apart_cotrans _ _ H1 x).
+  clearbody H'. change (minus1Trunc ((y<>x) + (x<>z))) in H'. revert H'.
+  apply minus1Trunc_rect_nondep;[|apply Hpr].
+  intros [H' | H'];trivial.
+  apply lt_apart.
+  apply (@istrans (RRR_to_R3 r) _ _ y);apply lt_iff_le_apart;split;auto.
+  apply issymm. assumption.
+Defined.
+
+End FullPoset.
+
+Section FullPseudoOrder.
+
+Context r {Hpr : RelationProp (RRR_to_R3 r)} {Hpo : IsFullPseudoOrder r}.
+
+Lemma not_lt_le_flip : forall x y : r, ~y<x -> x<=y.
+Proof.
+intros. apply le_iff_not_lt_flip. assumption.
+Defined.
+
+Instance: IsPoset (RRR_to_R2 r).
+Proof.
+split.
+- intros x y z H H'.
+  apply le_iff_not_lt_flip.
+  apply le_iff_not_lt_flip in H.
+  apply le_iff_not_lt_flip in H'.
+  revert H;revert H'.
+  apply (@pseudo_complement_trans (RRR_to_R1R3 r) _).
+- intros x. change (x <= x). apply le_iff_not_lt_flip.
+  revert x. change (IsIrreflexive (RRR_to_R3 r)). apply @strictorder_irrefl.
+  change (IsStrictOrder (RR_to_R2 (RRR_to_R1R3 r))). apply _.
+- intros x y H H'. simpl in x,y.
+  apply le_iff_not_lt_flip in H;apply le_iff_not_lt_flip in H'.
+  apply (@pseudo_complement_antisym (RRR_to_R1R3 r) _);assumption.
+Defined.
+
+Global Instance fullpseudo_is_fullposet : IsFullPoset r.
+Proof.
+split.
+change (IsApartness (RR_to_R1 (RRR_to_R1R3 r))). apply _.
+apply _.
+change (IsTransitive (RR_to_R2 (RRR_to_R1R3 r)));apply _.
+intros x y. split.
+intro H. split. apply le_iff_not_lt_flip.
+red. apply (@pseudoorder_is_antisym (RRR_to_R1R3 r) _). assumption.
+apply (@apart_iff_total_lt (RRR_to_R1R3 r) _). auto.
+intros [H0 H1].
+apply (@apart_iff_total_lt (RRR_to_R1R3 r) _) in H1. destruct H1.
+assumption.
+apply le_iff_not_lt_flip in H0. destruct H0;assumption.
+Defined.
+
+(* since x<=y is ~y<x, the double negation is equivalent *)
+Lemma le_stable : forall x y : r, ~ ~ x <= y -> x<=y.
+Proof.
+intros ? ? H. apply le_iff_not_lt_flip. intro.
+apply H. intro H'. apply le_iff_not_lt_flip in H'. auto.
+Defined.
+
+End FullPseudoOrder.
+
 
 Instance maximum_is_supremum : forall r P m, 
 IsMaximum r P m -> IsSupremum r P m.
@@ -768,7 +925,7 @@ apply ismaximum_prop;apply _.
 Defined.
 
 Instance minimum_prop : forall {r} {Ho : IsPoset r}
-{Hr : forall x y : r, IsHProp (rrel x y)} P {Hp : forall x, IsHProp (P x)},
+{Hr : RelationProp r} P {Hp : forall x, IsHProp (P x)},
 IsHProp (Minimum r P).
 Proof.
 intros;eapply trunc_equiv'. apply minimum_sig.
@@ -778,7 +935,7 @@ apply isminimum_prop;apply _.
 Defined.
 
 Instance supremum_prop : forall {r} {Ho : IsPoset r}
-{Hp : forall x y : r, IsHProp (rrel x y)}, 
+{Hp : RelationProp r}, 
 forall P, IsHProp (Supremum r P).
 Proof.
 intros.
@@ -786,7 +943,7 @@ apply minimum_prop;apply _.
 Defined.
 
 Instance infimum_prop : forall {r} {Ho : IsPoset r}
-{Hp : forall x y : r, IsHProp (rrel x y)}, 
+{Hp : RelationProp r}, 
 forall P, IsHProp (Infimum r P).
 Proof.
 intros;apply maximum_prop;apply _.
@@ -802,7 +959,7 @@ intros. issig (BuildIsLattice r) (@lattice_is_poset r) (@lattice_has_sup2 r)
 Defined.
 
 Instance islattice_prop : forall (r : Relation)
-{Hset : IsHSet r} {Hp : forall x y : r, IsHProp (rrel x y)}, 
+{Hset : IsHSet r} {Hp : RelationProp r}, 
 IsHProp (IsLattice r).
 Proof.
 intros. eapply trunc_equiv'. apply islattice_sig.
@@ -853,8 +1010,8 @@ intros [H|H].
 - intros;apply minus1Trunc_is_prop.
 Defined.
 
-Lemma total_order_min2 : forall {r : LeqRelation} {Hset : IsHSet r}
-{Hpr : forall x y : r, IsHProp (x <= y)} {Hto : IsTotalOrder r},
+Lemma total_order_min2 : forall {r : LeqRelation}
+{Hset : IsHSet r} {Hpr : RelationProp r} {Hto : IsTotalOrder r},
 forall a b, Minimum2 r a b.
 Proof.
 intros.
@@ -871,7 +1028,7 @@ intros [H|H].
 Defined.
 
 Instance total_order_lattice : forall {r : Relation} {Hset : IsHSet r}
-{Hpr : forall x y : r, IsHProp (x <= y)}
+{Hpr : RelationProp r}
 {Hto : IsTotalOrder r}, IsLattice r.
 Proof.
 intros;split. apply _.
@@ -1146,8 +1303,8 @@ apply semiring_cancel with (ZeroV ° x).
 path_via ((ZeroV + ZeroV) ° x).
 symmetry. apply semiring_distributes.
 path_via (ZeroV ° x).
-apply (ap (fun g => g ° x)). apply gid.
-apply inverse;apply gid.
+apply (ap (fun g => g ° x)). apply Zero.
+apply inverse;apply Zero.
 Defined.
 
 Lemma rmult_0_r : forall {G : semiring}, 
@@ -1157,8 +1314,8 @@ intros.
 apply semiring_cancel with (x ° ZeroV).
 path_via (x ° (ZeroV + ZeroV)).
 symmetry;apply semiring_distributes.
-path_via (x ° ZeroV). apply ap;apply gid.
-apply inverse;apply gid.
+path_via (x ° ZeroV). apply ap;apply Zero.
+apply inverse;apply Zero.
 Defined.
 
 Lemma rmult_inverse_right : forall G : semiring, forall x y : G,
@@ -1169,7 +1326,7 @@ intros ? ? ? H ?. apply linverse_inverse.
 red. apply transport with gidV;[|apply gid].
 path_via (z ° (x + y)).
 path_via (z°ZeroV). symmetry; apply rmult_0_r.
-apply ap. apply id_unique; apply _.
+apply ap. apply (id_unique (prering_plus G)); apply _.
 apply semiring_distributes.
 Defined.
 
@@ -1180,21 +1337,22 @@ Proof.
 intros ? ? ? H ?. apply linverse_inverse.
 red. apply transport with gidV;[|apply gid]. symmetry; path_via ((x + y)°z).
 symmetry;apply semiring_distributes.
-path_via (ZeroV°z). apply (ap (fun g => g°z)). apply id_unique;apply _.
+path_via (ZeroV°z). apply (ap (fun g => g°z)).
+apply (id_unique (prering_plus G));apply _.
 apply rmult_0_l.
 Defined.
 
 Lemma ropp_rmult_left : forall G : ring, forall x y : G, 
 roppV (x°y) = (roppV x)°y.
 Proof.
-intros. apply group_inverse_gopp.
+intros. apply (@group_inverse_gopp (ring_group G)).
 eapply rmult_inverse_left. apply _.
 Defined.
 
 Lemma ropp_rmult_right : forall G : ring, forall x y : G, 
 roppV (x°y) = x°(roppV y).
 Proof.
-intros. apply group_inverse_gopp.
+intros. apply (@group_inverse_gopp (ring_group G)).
 eapply rmult_inverse_right. apply _.
 Defined.
 
@@ -1216,7 +1374,7 @@ Definition easyIsRing (G : prering) {Hgr : IsGroup (prering_plus G)}
  {Hmon : IsMonoid (prering_mult G)} {Hdis : Distributes G} : IsRing G.
 Proof.
 apply BuildIsRing. apply BuildIsSemiring;apply _.
-apply gopp.
+apply (@gopp' (prering_plus G) _).
 Defined.
 
 Lemma strictintegral_integral_pr : forall G {Hr: IsStrictIntegral G}, 
@@ -1251,11 +1409,11 @@ apply (@concat _ _ (a°b + (a° (roppV c) + a°c))).
 simpl. symmetry. apply (@sg_assoc (prering_plus G) _).
 eapply concat;[|symmetry;apply gid].
 eapply concat;[|apply X].
-eapply concat;[ apply ap | apply gid].
+eapply concat;[ apply ap | apply (@gid' (prering_plus G) _)].
 eapply concat. symmetry.
 apply semiring_distributes.
 eapply concat;[apply ap | apply rmult_0_r].
-apply id_unique;apply _.
+apply (@id_unique (prering_plus G));apply _.
 apply Hr in X0. revert X0.
 apply minus1Trunc_rect_nondep;[|apply Hset].
 intros [p | p].
@@ -1359,18 +1517,12 @@ Proof.
 intros;split;apply _.
 Defined.
 
-Instance inverse_strict_linear : forall {r} {Hs : IsStrictLinear r},
- IsStrictLinear (r ^-1).
+Instance inverse_cotrans :  forall {r} {Hs : IsCotransitive r},
+ IsCotransitive (r ^-1).
 Proof.
 intros;intros ? ? H ?.
 eapply minus1Trunc_rect_nondep;[|apply minus1Trunc_is_prop|apply Hs;apply H].
 intros [H'|H'];apply min1;[right|left];apply H'.
-Defined.
-
-Instance inverse_cotrans :  forall {r} {Hs : IsCotransitive r},
- IsCotransitive (r ^-1).
-Proof.
-apply @inverse_strict_linear.
 Defined.
 
 Instance inverse_apart : forall {r} {Ha : IsApartness r}, IsApartness (r ^-1).
@@ -1808,15 +1960,4 @@ Defined.
 End Field_of_DecField.
 
 End Field_pr.
-
-
-
-
-
-
-
-
-
-
-
 
