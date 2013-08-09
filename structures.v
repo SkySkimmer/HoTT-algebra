@@ -285,21 +285,23 @@ BuildRR_sig G (BuildRR_Class _ (LLRR_R1 _ (LLRR_class G))
                                (LLRR_R2 _ (LLRR_class G))).
 Coercion LLRR_to_RR : LLRR_sig >-> RR_sig.
 
-Definition LLRR_to_L1R1 (G : LLRR_sig) : LR_sig :=
-BuildLR_sig G (BuildLR_Class _ (LLRR_L1 _ (LLRR_class G))
-                               (LLRR_R1 _ (LLRR_class G))).
+Definition LLRR_to_LLR1 (G : LLRR_sig) : LLR_sig :=
+BuildLLR_sig G (BuildLLR_Class _ (LLRR_L1 _ (LLRR_class G))
+                                 (LLRR_L2 _ (LLRR_class G))
+                                 (LLRR_R1 _ (LLRR_class G))).
 
-Definition LLRR_to_L1R2 (G : LLRR_sig) : LR_sig :=
-BuildLR_sig G (BuildLR_Class _ (LLRR_L1 _ (LLRR_class G))
-                               (LLRR_R2 _ (LLRR_class G))).
+Definition LLRR_to_LLR2 (G : LLRR_sig) : LLR_sig :=
+BuildLLR_sig G (BuildLLR_Class _ (LLRR_L1 _ (LLRR_class G))
+                                 (LLRR_L2 _ (LLRR_class G))
+                                 (LLRR_R2 _ (LLRR_class G))).
 
-Definition LLRR_to_L2R1 (G : LLRR_sig) : LR_sig :=
-BuildLR_sig G (BuildLR_Class _ (LLRR_L2 _ (LLRR_class G))
-                               (LLRR_R1 _ (LLRR_class G))).
+Definition LLRR_to_L1R1 (G : LLRR_sig) : LR_sig := LLR_to_L1R (LLRR_to_LLR1 G).
 
-Definition LLRR_to_L2R2 (G : LLRR_sig) : LR_sig :=
-BuildLR_sig G (BuildLR_Class _ (LLRR_L2 _ (LLRR_class G))
-                               (LLRR_R2 _ (LLRR_class G))).
+Definition LLRR_to_L1R2 (G : LLRR_sig) : LR_sig := LLR_to_L1R (LLRR_to_LLR2 G).
+
+Definition LLRR_to_L2R1 (G : LLRR_sig) : LR_sig := LLR_to_L2R (LLRR_to_LLR1 G).
+
+Definition LLRR_to_L2R2 (G : LLRR_sig) : LR_sig := LLR_to_L2R (LLRR_to_LLR2 G).
 
 (****************** LLRRR *******************)
 
@@ -1007,12 +1009,11 @@ srorder_plus :> forall z : G, IsEmbedding (plus z);
 nonneg_mult_compat :> IsPosPreserving (LLR_to_L2R G)
 }.
 
-Class IsStrictSemiringOrder (G : LLRR_sig) := BuildIsStrictSemiringOrder {
-strict_srorder_so :> IsStrictOrder (RR_to_R2 G);
+Class IsStrictSemiringOrder (G : LLR_sig) := BuildIsStrictSemiringOrder {
+strict_srorder_so :> IsStrictOrder G;
 strict_srorder_partial_minus : forall x y : G, x < y -> exists z, y = x + z;
-strict_srorder_plus :> forall z : G,
-       @IsEmbedding (RR_to_R2 G) (RR_to_R2 G) (plus z);
-pos_mult_compat :> IsPosPreserving (LLRR_to_L2R2 G)
+strict_srorder_plus :> forall z : G, IsEmbedding (plus z);
+pos_mult_compat :> IsPosPreserving (LLR_to_L2R G)
 }.
 
 Class IsPseudoSemiringOrder (G : LLRR_sig) := BuildIsPseudoSemiringOrder {
