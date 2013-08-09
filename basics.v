@@ -380,7 +380,7 @@ Defined.
 
 End Magma_pr.
 
-Module Related_pr.
+Module Relation_pr.
 Export Relation.
 Import minus1Trunc.
 
@@ -1156,10 +1156,10 @@ Defined.
 
 End UnionInterSec.
 
-End Related_pr.
+End Relation_pr.
 
-Module OMag_pr.
-Export OrderedMagma Magma_pr Related_pr.
+Module OrderedMagma_pr.
+Export OrderedMagma Magma_pr Relation_pr.
 
 Lemma invariant_compat : forall (G : LR_sig) {Htrans : IsTransitive G},
  IsInvariant G -> IsCompat G.
@@ -1255,7 +1255,7 @@ Proof.
 intros;split;[eapply rinverse_lregular|eapply linverse_rregular];apply Hinv.
 Defined.
 
-End OMag_pr.
+End OrderedMagma_pr.
 
 Module Ring_pr.
 Export Ring Magma_pr.
@@ -1455,7 +1455,7 @@ Defined.
 End Ring_pr.
 
 Module RelatorInverse.
-Export Related_pr OMag_pr.
+Export Relation_pr OrderedMagma_pr.
 Import minus1Trunc.
 
 Definition inverseRel (r : Relation) := BuildRelation r (fun x y => rrel y x).
@@ -1639,7 +1639,7 @@ Defined.
 End RelatorInverse.
 
 Module Lattice_pr.
-Export Lattice Related_pr RelatorInverse.
+Export Lattice Relation_pr RelatorInverse.
 Import minus1Trunc.
 
 Section Meet_to_order.
@@ -1872,7 +1872,7 @@ End Lattice_pr.
 
 
 Module Field_pr.
-Export Field Ring_pr Related_pr.
+Export Field Ring_pr Relation_pr.
 Import minus1Trunc.
 
 Lemma field_intdom_pr : forall {F} {Hf : IsField F}, 
@@ -1960,4 +1960,18 @@ Defined.
 End Field_of_DecField.
 
 End Field_pr.
+
+
+Module OrderedRing_pr.
+Export OrderedRing Ring_pr Relation_pr.
+
+
+
+
+
+
+End OrderedRing_pr.
+
+
+
 
