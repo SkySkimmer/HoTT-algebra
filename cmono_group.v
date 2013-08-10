@@ -484,8 +484,6 @@ Instance quot_ring : IsRing quotPrering := BuildIsRing _ _ (quotOpp _).
 
 (* result : any semiring can be embedded into a ring *)
 
-Fail Check (@Zero' quotPrering).
-
 End Semir.
 
 Section WithRel.

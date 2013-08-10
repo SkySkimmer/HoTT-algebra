@@ -4,8 +4,8 @@ Open Local Scope path_scope.
 
 Module Export Quotient.
 
-Local Inductive quotient : (forall A : Type, relation A -> Type) := 
-  | class_of : forall A (R : relation A), A -> quotient A R.
+Local Inductive quotient (A : Type) (R : relation A) : Type := 
+  | class_of : A -> quotient A R.
 
 Arguments quotient {A} R.
 Arguments class_of {A} R _.
@@ -185,4 +185,6 @@ Defined.
 End Compatible.
 
 Arguments quotient_rec2 {_ _ _ _ _} _ _ _ _.
+
+
 
