@@ -4,6 +4,11 @@ Require Export structures.
 
 Definition neq {T} : relation T := fun x y => ~ x=y.
 
+Instance neq_is_prop : forall {T} (x y : T), IsHProp (neq x y).
+Proof.
+intros. apply trunc_forall.
+Defined.
+
 Instance iff_trans : Transitive iff.
 Proof.
 red. intros A B C [H H'] [H0 H0'].
