@@ -753,10 +753,10 @@ split.
   apply le_iff_not_lt_flip in H.
   apply le_iff_not_lt_flip in H'.
   revert H;revert H'.
-  apply (@pseudo_complement_trans (RRR_to_R1R3 r) _).
+  apply pseudo_complement_trans; apply _.
 - intros x. change (x <= x). apply le_iff_not_lt_flip.
   revert x. change (IsIrreflexive (RRR_to_R3 r)). apply @strictorder_irrefl.
-  change (IsStrictOrder (RR_to_R2 (RRR_to_R1R3 r))). apply _.
+  apply _.
 - intros x y H H'. simpl in x,y.
   apply le_iff_not_lt_flip in H;apply le_iff_not_lt_flip in H'.
   apply (@pseudo_complement_antisym (RRR_to_R1R3 r) _);assumption.
@@ -764,16 +764,14 @@ Defined.
 
 Global Instance fullpseudo_is_fullposet : IsFullPoset r.
 Proof.
-split.
-change (IsApartness (RR_to_R1 (RRR_to_R1R3 r))). apply _.
-apply _.
-change (IsTransitive (RR_to_R2 (RRR_to_R1R3 r)));apply _.
+split;try apply _.
+
 intros x y. split.
 intro H. split. apply le_iff_not_lt_flip.
-red. apply (@pseudoorder_is_antisym (RRR_to_R1R3 r) _). assumption.
-apply (@apart_iff_total_lt (RRR_to_R1R3 r) _). auto.
+red. apply pseudoorder_is_antisym;assumption.
+apply apart_iff_total_lt. auto.
 intros [H0 H1].
-apply (@apart_iff_total_lt (RRR_to_R1R3 r) _) in H1. destruct H1.
+apply apart_iff_total_lt in H1. destruct H1.
 assumption.
 apply le_iff_not_lt_flip in H0. destruct H0;assumption.
 Defined.

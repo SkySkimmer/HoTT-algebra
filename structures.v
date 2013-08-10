@@ -178,20 +178,20 @@ RRR_carr :> Type;
 RRR_class : RRR_Class RRR_carr
 }.
 
-Definition RRR_to_R1 (R : RRR_sig) : ApartRelation :=
-BuildRelation R (RRR_c_R1 _ (RRR_class R)).
-Definition RRR_to_R2 (R : RRR_sig) : LeqRelation :=
-BuildRelation R (RRR_c_R2 _ (RRR_class R)).
-Definition RRR_to_R3 (R : RRR_sig) : LtRelation :=
-BuildRelation R (RRR_c_R3 _ (RRR_class R)).
-
 Definition RRR_to_R1R3 (R : RRR_sig) : RR_sig :=
 BuildRR_sig R (BuildRR_Class R (RRR_c_R1 R (RRR_class R))
                                (RRR_c_R3 R (RRR_class R))).
+Definition RRR_to_R2 (R : RRR_sig) : LeqRelation :=
+BuildRelation R (RRR_c_R2 _ (RRR_class R)).
+
+Definition RRR_to_R1 (R : RRR_sig) : ApartRelation := RR_to_R1 (RRR_to_R1R3 R).
+Definition RRR_to_R3 (R : RRR_sig) : LtRelation := RR_to_R2 (RRR_to_R1R3 R).
 
 Instance RRR_R1 {R : RRR_sig} : Apart R := @rrel (RRR_to_R1 R).
 Instance RRR_R2 {R : RRR_sig} : Leq R := @rrel (RRR_to_R2 R).
 Instance RRR_R3 {R : RRR_sig} : Lt R := @rrel (RRR_to_R3 R).
+
+Definition makeRRR_sig T r1 r2 r3 := BuildRRR_sig T (BuildRRR_Class T r1 r2 r3).
 
 (***************** LR ***********************)
 
@@ -247,11 +247,9 @@ Coercion LLR_to_R : LLR_sig >-> Relation.
 
 (*not coercions: would be ambiguous*)
 Definition LLR_to_L1R (G : LLR_sig) : LR_sig :=
-BuildLR_sig G (BuildLR_Class _ (LLR_c_L1 _ (LLR_class G))
-                               (LLR_c_R _ (LLR_class G))).
+makeLR_sig G (@rplus G) (@rrel G).
 Definition LLR_to_L2R (G : LLR_sig) : LR_sig :=
-BuildLR_sig G (BuildLR_Class _ (LLR_c_L2 _ (LLR_class G))
-                               (LLR_c_R _ (LLR_class G))).
+makeLR_sig G (@rmult G) (@rrel G).
 
 (****************** LLRR *******************)
 
@@ -286,14 +284,10 @@ BuildRR_sig G (BuildRR_Class _ (LLRR_R1 _ (LLRR_class G))
 Coercion LLRR_to_RR : LLRR_sig >-> RR_sig.
 
 Definition LLRR_to_LLR1 (G : LLRR_sig) : LLR_sig :=
-BuildLLR_sig G (BuildLLR_Class _ (LLRR_L1 _ (LLRR_class G))
-                                 (LLRR_L2 _ (LLRR_class G))
-                                 (LLRR_R1 _ (LLRR_class G))).
+makeLLR_sig G (@rplus G) (@rmult G) (@RR_R1 G).
 
 Definition LLRR_to_LLR2 (G : LLRR_sig) : LLR_sig :=
-BuildLLR_sig G (BuildLLR_Class _ (LLRR_L1 _ (LLRR_class G))
-                                 (LLRR_L2 _ (LLRR_class G))
-                                 (LLRR_R2 _ (LLRR_class G))).
+makeLLR_sig G (@rplus G) (@rmult G) (@RR_R2 G).
 
 Definition LLRR_to_L1R1 (G : LLRR_sig) : LR_sig := LLR_to_L1R (LLRR_to_LLR1 G).
 
@@ -338,10 +332,7 @@ BuildRRR_sig G (BuildRRR_Class _ (LLRRR_R1 _ (LLRRR_class G))
 Coercion LLRRR_to_RRR : LLRRR_sig >-> RRR_sig.
 
 Definition LLRRR_to_LLR1R3 (G : LLRRR_sig) : LLRR_sig :=
-BuildLLRR_sig G (BuildLLRR_Class G (LLRRR_L1 _ (LLRRR_class G))
-                                   (LLRRR_L2 _ (LLRRR_class G))
-                                   (LLRRR_R1 _ (LLRRR_class G))
-                                   (LLRRR_R3 _ (LLRRR_class G))).
+makeLLRR_sig G (@rplus G) (@rmult G) (@RRR_R1 G) (@RRR_R3 G).
 
 End Signatures.
 
