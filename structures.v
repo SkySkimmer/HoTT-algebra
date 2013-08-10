@@ -988,8 +988,8 @@ End Field.
 Module OrderedRing.
 Export Ring Relation OrderedMagma.
 
-Class IsPosPreserving (G : LR_sig)
- := ispospreserving : forall zero : Identity G, 
+Class IsPosPreserving (G : LLR_sig)
+ := ispospreserving : forall zero : Identity (prering_plus G),
       forall x y : G, identity_val zero <= x -> identity_val zero <= y 
            -> identity_val zero <= x°y.
 
@@ -997,14 +997,14 @@ Class IsSemiringOrder (G : LLR_sig) := BuildIsSemiringOrder {
 srorder_po :> IsPoset G;
 srorder_partial_minus : forall x y : G, x <= y -> exists z, y = x + z;
 srorder_plus :> forall z : G, IsEmbedding (plus z);
-nonneg_mult_compat :> IsPosPreserving (LLR_to_L2R G)
+nonneg_mult_compat :> IsPosPreserving G
 }.
 
 Class IsStrictSemiringOrder (G : LLR_sig) := BuildIsStrictSemiringOrder {
 strict_srorder_so :> IsStrictOrder G;
 strict_srorder_partial_minus : forall x y : G, x < y -> exists z, y = x + z;
 strict_srorder_plus :> forall z : G, IsEmbedding (plus z);
-pos_mult_compat :> IsPosPreserving (LLR_to_L2R G)
+pos_mult_compat :> IsPosPreserving G
 }.
 
 Class IsPseudoSemiringOrder (G : LLRR_sig) := BuildIsPseudoSemiringOrder {
@@ -1013,7 +1013,7 @@ pseudo_srorder_partial_minus : forall x y : G, ~y < x -> exists z, y = x + z;
 pseudo_srorder_plus :> forall z : G,
         @IsEmbedding (RR_to_R2 G) (RR_to_R2 G) (plus z);
 pseudo_srorder_mult_ext :> IsBinRegular (LLRR_to_L2R1 G);
-pseudo_srorder_pos_mult_compat :> IsPosPreserving (LLRR_to_L2R2 G)
+pseudo_srorder_pos_mult_compat :> IsPosPreserving (LLRR_to_LLR2 G)
 }.
 
 Class FullPseudoSemiringOrder (G : LLRRR_sig) :=
