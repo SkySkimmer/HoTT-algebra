@@ -17,32 +17,36 @@ Fixpoint Napp {A} (l l' : (NEList A)) : (NEList A) :=
     | cons i l => cons i (Napp l l')
     end.
 
-Definition someOp {A : magma} : law (option A) := fun a b => match a,b with
+Section VarSec.
+
+Context {A} {G : Gop A}.
+
+Definition someOp : Gop (option A) := fun a b => match a,b with
   | Some x, Some y => Some (gop x y)
   | _, _ => None
   end.
 
-Fixpoint evalNE {A : magma} {B} (f : B -> option A) (l : (NEList B))
+Fixpoint evalNE {B} (f : B -> option A) (l : (NEList B))
  : option A := match l with
     | cons i l => someOp (f i) (evalNE f l)
     | single i => f i
     end.
 
-Lemma someOp_assoc : forall {A : magma} {Hassoc : Associative A},
-forall x y z : option A, someOp x (someOp y z) = someOp (someOp x y) z.
+Global Instance someOp_assoc : forall {Hassoc : Associative G},
+Associative someOp.
 Proof.
-destruct x,y,z;simpl;auto.
-apply ap;apply Hassoc.
+red. destruct x,y,z;simpl;auto.
+unfold gop;simpl. apply ap;apply Hassoc.
 Defined.
 
-Lemma someOp_comm : forall {A : magma} {Hcomm : Commutative A},
-forall x y : option A, someOp x y = someOp y x.
+Global Instance someOp_comm : forall {Hcomm : Commutative G},
+Commutative someOp.
 Proof.
-destruct x,y;simpl;auto.
-apply ap;apply Hcomm.
+red;destruct x,y;simpl;auto.
+apply (ap (@Some _));apply Hcomm.
 Defined.
 
-Lemma evalNE_app : forall {A : magma} {Hassoc : Associative A},
+Lemma evalNE_app : forall {Hassoc : Associative G},
   forall {B} (f : B -> option A) l l', 
   evalNE f (Napp l l') = someOp (evalNE f l) (evalNE f l').
 Proof.
@@ -53,10 +57,10 @@ apply ap. apply IHl.
 apply someOp_assoc.
 Defined.
 
-Lemma NEList_eq_dec : forall {A}, decidable_paths A ->
+Lemma NEList_eq_dec : decidable_paths A ->
  decidable_paths (NEList A).
 Proof.
-red. intros A Ha.
+red. intros Ha.
 induction x;destruct y.
 destruct (Ha a a0);[left|right].
 apply ap;assumption.
@@ -74,6 +78,8 @@ right;exact (fun H => n (ap (fun s => match s with
 right;exact (fun H => n (ap (fun s => match s with
   | cons z _ => z | _ => a end) H)).
 Defined.
+
+End VarSec.
 
 Section Sort.
 
@@ -94,8 +100,8 @@ Fixpoint sort l := match l with
   | cons i l => sortInsert i (sort l)
   end.
 
-Lemma sortInsert_correct : forall {G} {Hsg : IsSemigroup G}, 
-forall (f : A -> option G) i l,
+Lemma sortInsert_correct : forall {B} {G:Gop B} {Hsg : IsSemigroup G}, 
+forall (f : A -> option B) i l,
  evalNE f (sortInsert i l) = evalNE f (cons i l).
 Proof.
 simpl. induction l.
@@ -111,19 +117,19 @@ simpl. induction l.
   apply inverse;apply someOp_assoc.
 Defined.
 
-Lemma sort_correct : forall {G} {Hsg : IsSemigroup G}, 
-  forall (f : A -> option G) l, evalNE f (sort l) = evalNE f l.
+Lemma sort_correct : forall {B} {G:Gop B} {Hsg : IsSemigroup G}, 
+  forall (f : A -> option B) l, evalNE f (sort l) = evalNE f l.
 Proof.
 induction l;simpl.
 - reflexivity.
-- path_via (someOp (f a) (evalNE f (sort l))).
-  apply sortInsert_correct.
+- eapply concat.
+  apply sortInsert_correct. simpl.
   apply ap. assumption.
 Defined.
 
 End Sort.
 
-Arguments sort_correct {_} _ {_ _} _ _.
+Arguments sort_correct {_} _ {_ _ _} _ _.
 
 Definition nat_order_dec : nat -> nat -> Bool.
 Proof.
@@ -162,7 +168,7 @@ Inductive T (A : Type) : Type :=
 Arguments Op {_} _ _.
 Arguments Val {_} _.
 
-Fixpoint evalTree {A : magma} {B} (f : B -> option A) (t : T B) : option A := 
+Fixpoint evalTree {A} {G:Gop A} {B} (f : B -> option A) (t : T B) : option A :=
   match t with
     | Op t1 t2 => someOp (evalTree f t1) (evalTree f t2)
     | Val i => f i
@@ -178,7 +184,7 @@ Fixpoint T2list {A} (t : T A) : (NEList A) :=
     | Val i => single i
     end.
 
-Lemma T2list_correct : forall {A} {Hassoc : Associative A} 
+Lemma T2list_correct : forall {A} {G : Gop A} {Hassoc : Associative G}
 {B} (f : B -> option A) t, evalNE f (T2list t) = evalTree f t.
 Proof.
 induction t.
@@ -191,7 +197,7 @@ Defined.
 
 Section SortUse.
 
-Context {A} {Hsg : IsSemigroup A}.
+Context {A} {G : Gop A} {Hsg : IsSemigroup G}.
 Context {B} {order_dec : B -> B -> Bool}.
 
 Lemma sort_full : forall (f : B -> option A) t,
@@ -244,7 +250,7 @@ intros ? ? H;induction H.
 - intros. apply H with (x::l);auto.
 Defined.
 
-Instance prefix_trans : Transitive prefix.
+Global Instance prefix_trans : Transitive prefix.
 Proof.
 red. intros l1 l2 l3 H H'.
 revert H'. revert l3.
@@ -279,7 +285,7 @@ intros ? ? H;induction H.
   apply IHprefix. apply H'.
 Defined.
 
-Lemma prefix_antisymm : forall l l', prefix l l' -> prefix l' l -> l=l'.
+Global Instance prefix_antisymm : Relation.Antisymmetric prefix.
 Proof.
 intros ? ? H;induction H;intros H'.
 destruct l;auto.
@@ -345,7 +351,7 @@ Arguments xfind {_} _ _ _.
 
 Section Ast.
 
-Context {A : magma}.
+Context {A : Type} {G : Gop A}.
 
 Notation onth := nth_error.
 
@@ -431,7 +437,7 @@ Canonical Structure op_tag t := var_tag t.
 
 Lemma ast_pr_op : forall {i j k : ctx} {t1 t2 : T nat}
  (a1 : ast i j t1) (a2 : ast j k t2),
-        evalTree (onth k) (Op t1 t2) = @Some A (op_tag (gop a1 a2)).
+        evalTree (onth k) (Op t1 t2) = @Some A (op_tag (G a1 a2)).
 Proof.
 intros ? ? ? ? ? ? ?.
 change (someOp (evalTree (onth k) t1) (evalTree (onth k) t2) =
@@ -443,7 +449,7 @@ Defined.
 
 Canonical Structure ast_op (i j k : ctx) (t1 t2 : T nat)
  (a1 : ast i j t1) (a2 : ast j k t2) :=
-  Ast i k (Op t1 t2) (op_tag (gop a1 a2)) (prefix_trans a1 a2)
+  Ast i k (Op t1 t2) (op_tag (G a1 a2)) (prefix_trans a1 a2)
    (ast_pr_op a1 a2).
 
 Canonical Structure ast_var (i j : ctx) (n : nat) (f : xfind i j n) :=
@@ -461,7 +467,7 @@ intros ? ? ? H.
 apply (ap (fun s => match s with | Some z => z | _ => x end) H).
 Defined.
 
-Context {Hsg : IsSemigroup A}.
+Context {Hsg : IsSemigroup G}.
 
 Lemma ast_use : forall {i j : ctx} {t1 t2 : T nat}
  (f1 : ast [] i t1) (f2 : ast i j t2), 
@@ -509,10 +515,10 @@ Inductive T2 : Type :=
   | Val2 : nat -> T2
 .
 
-Definition somePlus {A : prering} : law (option A) := @someOp (prering_plus _).
-Definition someMult {A : prering} : law (option A) := @someOp (prering_mult _).
+Definition somePlus {A} {G : Symbols.Plus A} : Symbols.Plus (option A) := someOp.
+Definition someMult {A} {G : Symbols.Mult A} : Symbols.Mult (option A) := someOp.
 
-Fixpoint evalT2 {A : prering} (f : _ -> option A) (t : T2) : option A :=
+Fixpoint evalT2 {A} {G : Prering A} (f : _ -> option A) (t : T2) : option A :=
 match t with
   | Plus x y => somePlus (evalT2 f x) (evalT2 f y)
   | Mult x y => someMult (evalT2 f x) (evalT2 f y)
@@ -524,8 +530,9 @@ Notation Flat2 := (T (NEList nat)).
 Notation FPlus := (@Op (NEList nat)).
 Notation ValL  := (@Val (NEList nat)).
 
-Definition evalFlat2 {A : prering} (f : nat -> option A) (t : Flat2)
- : option A := @evalTree (prering_plus A) _ (fun l => @evalNE (prering_mult A) _ f l) t.
+Definition evalFlat2 {A} {G : Prering A} (f : nat -> option A) (t : Flat2)
+ : option A := @evalTree A (+) _
+          (fun l => @evalNE _ (°) _ f l) t.
 
 (* eval (distribute t1 t2) = (eval t1) * (eval t2) *)
 Fixpoint distribute (t1 : Flat2) : Flat2 -> Flat2 := fix f (t2 : Flat2) :=
@@ -551,9 +558,9 @@ Section Mag2.
 
 Notation onth := nth_error.
 
-Context {A : prering}
- {Hadd : IsSemigroup (prering_plus A)} {Hmult : IsSemigroup (prering_mult A)}
- {Hdistrib : Distributes A}.
+Context {A} {G : Prering A}.
+Context {Hadd : @IsSemigroup A (+)} {Hmult : @IsSemigroup A (°)}
+ {Hdistrib : Distributes G}.
 
 Lemma some_distrib_right : forall a b c : option A, 
 someMult (somePlus b c) a = somePlus (someMult b a) (someMult c a).
@@ -598,7 +605,7 @@ apply (transport _ (inverse Hl)).
     (evalFlat2 f (distribute x2 (ValL l)))).
   pattern (evalFlat2 f (distribute x1 (ValL l)));
   apply (transport _ (inverse IHx1)). simpl. reflexivity.
-  simpl. unfold someMult. eapply concat;[apply evalNE_app|].
+  simpl. unfold someMult. eapply concat;[apply @evalNE_app|]. apply sg_assoc.
   apply ap. apply Hl.
 
 - induction x.
@@ -606,10 +613,10 @@ apply (transport _ (inverse Hl)).
     (evalFlat2 f (distribute x2 (ValL l)))).
   path_via (someMult (somePlus (evalFlat2 f x1) (evalFlat2 f x2)) None).
   destruct (evalFlat2 f x1), (evalFlat2 f x2);
-  simpl in *; (path_via (@somePlus A None None);
+  simpl in *; (path_via (@somePlus A _ None None);
   apply ap11;[apply ap|];assumption).
   simpl.
-  eapply concat. apply (@evalNE_app (prering_mult A)). apply _.
+  eapply concat. apply (@evalNE_app A (°)). apply sg_assoc.
   apply ap. assumption.
 
 (* Hleft done *)
@@ -658,18 +665,16 @@ path_via (somePlus (evalFlat2 f (Flat2_order_in t1))
  (evalFlat2 f (Flat2_order_in t2))).
 path_via (somePlus (evalFlat2 f t1) (evalFlat2 f t2)).
 apply ap11;[apply ap|];assumption.
-unfold evalFlat2;simpl. apply (@sort_correct _ _ (prering_mult A)). exact _.
+unfold evalFlat2;simpl. apply (@sort_correct _ _ A (°)). exact _.
 Defined.
 
 End Mag2.
 
 Section Ast2.
 
-Context {A : prering}.
+Context {A} {G : Prering A}.
 
 Notation onth := nth_error.
-
-Structure tagged := Tag { untag :> A }.
 
 Definition ctx := list A.
 
@@ -697,26 +702,27 @@ induction t;intros.
 Defined.
 
 Structure ast2 (c c' : ctx) (t : T2) := Ast2 {
-val2 :> tagged;
+val2 :> @tagged A;
 ast2_prefix :> prefix c c';
-ast2_pr :> evalT2 (onth c') t = @Some A val2
+ast2_pr :> evalT2 (onth c') t = Some (untag val2)
 }.
 
 Arguments ast2_prefix {_ _ _} _.
 Arguments val2 {_ _ _} _.
 
 
-Definition var_tag t := Tag t.
-Definition mult_tag t := var_tag t.
-Canonical Structure plus_tag t := mult_tag t.
+Definition var_tag (t:A) := Tag t.
+Definition mult_tag (t:A) := var_tag t.
+Canonical Structure plus_tag (t:A) := mult_tag t.
 
 Lemma ast2_pr_plus : forall {i j k : ctx} {t1 t2 : T2}
  (a1 : ast2 i j t1) (a2 : ast2 j k t2),
-        evalT2 (onth k) (Plus t1 t2) = @Some A (plus_tag (rplus a1 a2)).
+        evalT2 (onth k) (Plus t1 t2)
+        = Some (untag (plus_tag (untag a1 + untag a2))).
 Proof.
 intros ? ? ? ? ? ? ?.
 change (somePlus (evalT2 (onth k) t1) (evalT2 (onth k) t2) =
-   somePlus (@Some A a1) (@Some A a2)).
+   somePlus (Some (untag a1)) (Some (untag a2))).
 apply ap11;[apply ap|].
 apply prefix_eval2 with j. apply a2. apply a1.
 apply a2.
@@ -724,16 +730,17 @@ Defined.
 
 Canonical Structure ast2_plus (i j k : ctx) (t1 t2 : T2)
  (a1 : ast2 i j t1) (a2 : ast2 j k t2) :=
-  Ast2 i k (Plus t1 t2) (plus_tag (rplus a1 a2)) (prefix_trans _ _ _ a1 a2)
-   (ast2_pr_plus a1 a2).
+  Ast2 i k (Plus t1 t2) (plus_tag ((untag a1) + (untag a2)))
+   (prefix_trans _ _ _ a1 a2) (ast2_pr_plus a1 a2).
 
 Lemma ast2_pr_mult : forall {i j k : ctx} {t1 t2 : T2}
  (a1 : ast2 i j t1) (a2 : ast2 j k t2),
-        evalT2 (onth k) (Mult t1 t2) = @Some A (mult_tag (rmult a1 a2)).
+        evalT2 (onth k) (Mult t1 t2)
+        = Some (untag (mult_tag ((untag a1) ° (untag a2)))).
 Proof.
 intros ? ? ? ? ? ? ?.
 change (someMult (evalT2 (onth k) t1) (evalT2 (onth k) t2) =
-   someMult (@Some A a1) (@Some A a2)).
+   someMult (Some (untag a1)) (Some (untag a2))).
 apply ap11;[apply ap|].
 apply prefix_eval2 with j. apply a2. apply a1.
 apply a2.
@@ -741,13 +748,13 @@ Defined.
 
 Canonical Structure ast2_mult (i j k : ctx) (t1 t2 : T2)
  (a1 : ast2 i j t1) (a2 : ast2 j k t2) :=
-  Ast2 i k (Mult t1 t2) (mult_tag (rmult a1 a2)) (prefix_trans _ _ _ a1 a2)
-   (ast2_pr_mult a1 a2).
+  Ast2 i k (Mult t1 t2) (mult_tag ((untag a1) ° (untag a2)))
+   (prefix_trans _ _ _ a1 a2) (ast2_pr_mult a1 a2).
 
 Canonical Structure ast2_var (i j : ctx) (n : nat) (f : xfind _ i j n) :=
   Ast2 i j (Val2 n) (var_tag (xuntag _ (elem_of _ _ _ _ f))) f f. 
 
-Lemma ast2_semiring : forall {Hsemir : IsSemiring A}, 
+Lemma ast2_semiring : forall {Hsemir : IsSemiring G}, 
 forall {i j : ctx} {t1 t2 : T2}
  (f1 : ast2 [] i t1) (f2 : ast2 i j t2), 
   evalFlat2 (onth j) (Flat2_order_in (flatten t1)) =
@@ -760,31 +767,32 @@ eapply concat;
 [ | eapply concat;[|apply ast2_pr]].
 symmetry. eapply prefix_eval2. apply f2. apply f1.
 eapply concat;[eapply concat;[|apply H]|].
-symmetry. eapply concat. apply order_in_ok. apply flatten_ok.
-eapply concat. apply order_in_ok. apply flatten_ok.
+symmetry. eapply concat. apply @order_in_ok. apply Hsemir.
+apply @flatten_ok;apply Hsemir.
+eapply concat. apply @order_in_ok;apply Hsemir. apply @flatten_ok;apply Hsemir.
 Defined.
 
 Definition full_simplify (t : T2) := 
   sort NEList_nat_order_dec (T2list (Flat2_order_in (flatten t))).
 
-Lemma ast2_full_semiring : forall {Hsemir : IsSemiring A}, 
+Lemma ast2_full_semiring : forall {Hsemir : IsSemiring G},
 forall {i j : ctx} {t1 t2 : T2}
  (f1 : ast2 [] i t1) (f2 : ast2 i j t2), 
-  @evalNE (prering_plus A) _ (fun l => @evalNE (prering_mult A) _ (onth j) l)
+  @evalNE A (+) _ (fun l => @evalNE A (°) _ (onth j) l)
      (full_simplify t1) =
-  @evalNE (prering_plus A) _ (fun l => @evalNE (prering_mult A) _ (onth j) l)
+  @evalNE A (+) _ (fun l => @evalNE A (°) _ (onth j) l)
      (full_simplify t2)
   -> untag (val2 f1) = untag (val2 f2).
 Proof.
 intros ? ? ? ? ? ? ? H.
 apply ast2_semiring.
-unfold evalFlat2.
-apply (@sort_inj (prering_plus A) _ _ NEList_nat_order_dec).
+unfold evalFlat2. assert (@IsSemigroup A (°));[apply Hsemir|].
+apply (@sort_inj A (°) _ _ NEList_nat_order_dec);clear X.
 exact H.
 Defined.
 
-Context {Hadd : IsSemigroup (prering_plus A)} {Hmult : IsSemigroup (prering_mult A)}
- {Hdistrib : Distributes A}.
+Context {Hadd : @IsSemigroup A (+)} {Hmult : @IsSemigroup A (°)}
+ {Hdistrib : Distributes G}.
 
 Lemma ast2_use : forall {i j : ctx} {t1 t2 : T2}
  (f1 : ast2 [] i t1) (f2 : ast2 i j t2), 
