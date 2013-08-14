@@ -674,9 +674,10 @@ Section Ast2.
 
 Context {A} {G : Prering A}.
 
-Notation onth := nth_error.
+(*note: cannot reuse BinOpTree.tagged because its canonical projections would override our new ones *)
+Structure tagged := Tag { untag :> A }.
 
-Definition ctx := list A.
+Notation onth := nth_error.
 
 Lemma prefix_eval2 : forall c c', prefix c c' -> forall (t : T2) (v : A), 
 evalT2 (onth c) t = Some v -> evalT2 (onth c') t = Some v.
@@ -702,7 +703,7 @@ induction t;intros.
 Defined.
 
 Structure ast2 (c c' : ctx) (t : T2) := Ast2 {
-val2 :> @tagged A;
+val2 :> tagged;
 ast2_prefix :> prefix c c';
 ast2_pr :> evalT2 (onth c') t = Some (untag val2)
 }.
@@ -812,5 +813,16 @@ Defined.
 
 End Ast2.
 
+Lemma test2 : forall A (G : Prering A) {Hsemir : IsSemiring G},
+forall a b c : A, a°(b+c) = a°c + a°b.
+Proof.
+intros.
+ssrapply (@ast2_full_semiring A (+ °) Hsemir).
+Abort.
+
 End Distributive.
+
+
+
+
 
