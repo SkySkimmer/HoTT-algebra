@@ -64,12 +64,12 @@ eapply concat;[symmetry;apply sg_assoc;apply _|].
 eapply concat;[|apply sg_assoc;apply _]. apply ap. apply sg_comm;apply _.
 Defined.
 
-Instance equivU_refl : Reflexive equivU.
+Global Instance equivU_refl : Reflexive equivU.
 Proof.
 intros ?. reflexivity.
 Defined.
 
-Instance equivU_trans : forall {Hsg : IsSemigroup L}
+Global Instance equivU_trans : forall {Hsg : IsSemigroup L}
 {Hcan : forall a : G, Cancel L a}, Transitive equivU.
 Proof.
 intros ? ? [x x'] [y y'] [z z'] H H'.
@@ -87,7 +87,7 @@ eapply concat;[|symmetry;apply sg_assoc;apply _]. apply ap10.
 apply ap;apply sg_comm;apply _.
 Defined.
 
-Instance equivU_symm : Symmetric equivU.
+Global Instance equivU_symm : Symmetric equivU.
 Proof.
 intros x y. apply inverse.
 Defined.

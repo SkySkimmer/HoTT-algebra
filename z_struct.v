@@ -24,39 +24,39 @@ Defined.
 Module Relative.
 Import GroupOfCMono.
 
-(*NB: leaving nat_mag2 to make sure we infer the right stuff*)
-Definition ZRing := BuildRing (quotPrering (BuildSemiring nat_prering _))
- (quot_ring _).
+Definition Z := @quotU nat (+).
+Instance ZPrering : Prering Z := quotPrering _.
+Instance ZRing : IsRing ZPrering := quot_ring _.
 
-Definition z_class (m n : nat) : ZRing := quotIn (m, n).
+Definition z_class : nat*nat -> Z := quotIn (+).
 
-Definition zEquiv : relation (nat*nat) := equivU.
+Definition zEquiv : Rel (nat*nat) := equivU (+).
 
-Instance ZRing_set : IsHSet ZRing := _.
+Instance ZRing_set : IsHSet Z := _.
 
-Instance zEquiv_prop : forall a b, IsHProp (zEquiv a b).
+Instance zEquiv_prop : RelationProp zEquiv.
 Proof.
-intros. apply _.
+red;apply _.
 Defined.
 
-Definition z_rect : forall (P : ZRing -> Type) 
-(dclass : forall m n, P (z_class m n)),
+Definition z_rect : forall (P : Z -> Type) 
+(dclass : forall m n, P (z_class (m, n))),
 (forall a b a' b' (Hequiv : zEquiv (a,b) (a',b')),
- transport _ (@related_classes_eq _ equivU _ _ Hequiv) (dclass a b)
+ transport _ (@related_classes_eq _ zEquiv _ _ Hequiv) (dclass a b)
    = (dclass a' b')) ->
 forall z, P z.
 Proof.
 intros P dclass H.
-apply quotU_rect with (fun p => match p as p' return (P (quotIn p')) with
-  | (a,b) => dclass a b end).
-simpl. intros.
+apply quotU_rect with (fun p => match p as p' return (P (quotIn (+) p'))
+ with | (a,b) => dclass a b end).
+intros.
 destruct x, y.
 apply H.
 Defined.
 
-Definition z_ind : forall (P : ZRing -> Type), 
-(forall a b, IsHProp (P (z_class a b))) -> 
-(forall a b, P (z_class a b)) ->
+Definition z_ind : forall (P : Z -> Type), 
+(forall a b, IsHProp (P (z_class (a, b)))) -> 
+(forall a b, P (z_class (a, b))) ->
 forall z, P z.
 Proof.
 intros P Hp Hd. apply quotU_ind.
@@ -65,26 +65,26 @@ intros [a b]. apply Hp.
 simpl. intros [a b];apply Hd.
 Defined.
 
-Definition z_ind_contr : forall (P : ZRing -> Type), 
-(forall a b, Contr (P (z_class a b))) ->
+Definition z_ind_contr : forall (P : Z -> Type),
+(forall a b, Contr (P (z_class (a, b)))) ->
 forall z, Contr (P z).
 Proof.
 intros P Hd. apply quotU_rect with
- (fun p => match p as p' return (Contr (P (quotIn p'))) with
+ (fun p => match p as p' return (Contr (P (quotIn (+) p'))) with
    | (a,b) => Hd a b end).
 intros.
 apply hprop_contr.
 Defined.
 
-Lemma z_rect_compute : forall (P : ZRing -> Type)
-(dclass : forall m n, P (z_class m n)) H a b,
- z_rect P dclass H (z_class a b) = dclass a b.
+Lemma z_rect_compute : forall (P : Z -> Type)
+(dclass : forall m n, P (z_class (m, n))) H a b,
+ z_rect P dclass H (z_class (a, b)) = dclass a b.
 Proof.
 intros. reflexivity.
 Defined.
 
 Section NotaSec.
-Notation "[ a , b ]" := (z_class a b).
+Notation "[ a , b ]" := (z_class (a, b)).
 
 Lemma zEquiv_eval : forall a b c d, zEquiv (a,b) (c,d) = (a+d = c+b).
 Proof.
@@ -103,46 +103,46 @@ Proof.
 intros;reflexivity.
 Defined.
 
-Definition zOpp : forall x : ZRing, @Inverse (@prering_plus ZRing) x := ropp.
-Definition zOppV : ZRing -> ZRing := fun x => inverse_val _ (zOpp x).
+Definition zOpp : forall x : Z, Inverse (+) x := ropp.
+Definition zOppV : Z -> Z := fun x => inverse_val (zOpp x).
+Instance zOppP : forall x : Z, IsInverse (+) x (zOppV x) := _.
 
-Definition zero_class : @ZeroV ZRing = [0,0] := idpath.
-Definition one_class : @OneV ZRing = [1,0] := idpath.
+Definition zero_class : ZeroV = [0,0] := idpath.
+Definition one_class : OneV = [1%nat,0] := idpath.
 
-Lemma zOpp_eval : forall a b, zOppV (z_class a b) = z_class b a.
+Lemma zOpp_eval : forall a b, zOppV [a, b] = [b, a].
 Proof.
 intros;reflexivity.
 Defined.
 
 Lemma z_related_classes_eq : forall a b c d, zEquiv (a,b) (c,d) -> 
-z_class a b = z_class c d.
+[a, b] = [c, d].
 Proof.
 intros ? ? ? ?. apply related_classes_eq.
 Defined.
 
-Lemma z_classes_eq_related : forall a b c d, z_class a b = z_class c d -> 
-zEquiv (a,b) (c,d).
+Lemma z_classes_eq_related : forall a b, z_class a = z_class b -> 
+zEquiv a b.
 Proof.
-intros ? ? ? ?. apply classes_eq_related.
+apply classes_eq_related.
 Defined.
 
-Definition zEmbed (n:nat) : ZRing := quotEmbed n.
+Definition zEmbed : nat -> Z := quotEmbed (+).
 
 Lemma zEmbed_injective : forall n m, zEmbed n = zEmbed m -> n=m.
 Proof.
 unfold zEmbed. intros ? ? H.
-apply (@quotEmbed_injective nat_add _ _).
+eapply quotEmbed_injective. apply _.
 apply H.
 Defined.
 
 Definition zEmbed_eval : forall n, zEmbed n = [n,0] := fun _ => idpath.
 
+Definition zCanon (z : Z) (x : nat*nat) :=
+ (z = z_class x) * minus1Trunc (fst x = 0 \/ snd x = 0).
 
-Definition zCanon (z : ZRing) (x : nat*nat) :=
- (z = quotIn x) * minus1Trunc (fst x = 0 \/ snd x = 0).
-
-Definition is_zCanon : forall x, (fst x = 0 \/ snd x = 0) -> zCanon (quotIn x) x
- := fun x H => (idpath , min1 H).
+Definition is_zCanon : forall x, (fst x = 0 \/ snd x = 0) ->
+ zCanon (z_class x) x := fun x H => (idpath , min1 H).
 
 Definition zCanon_or : forall z x, zCanon z x -> (fst x = 0 \/ snd x = 0).
 Proof.
@@ -163,7 +163,7 @@ Defined.
 Lemma zCanon_atmost : forall z, atmost1P (zCanon z).
 Proof.
 intros. red. intros [xa xb] [ya yb] Hx Hy.
-assert (Heq : quotIn (xa, xb) = quotIn (ya, yb)). path_via z.
+assert (Heq : quotIn (+) (xa, xb) = quotIn (+) (ya, yb)). path_via z.
 symmetry;apply Hx. apply Hy.
 apply zCanon_or in Hx;apply zCanon_or in Hy.
 simpl in Hx,Hy.
@@ -176,8 +176,8 @@ symmetry in Heq.
 apply nplus_0_0_back in Heq;destruct Heq as [[] []];reflexivity.
 apply nplus_0_0_back in Heq;destruct Heq as [[] []];reflexivity.
 apply (ap (fun g => (g, 0))).
-path_via (gop xa 0). apply inverse. apply nplus_0_r.
-path_via (gop ya 0). apply nplus_0_r.
+path_via (xa + 0). apply inverse. apply nplus_0_r.
+path_via (ya + 0). apply nplus_0_r.
 Defined.
 
 Global Instance zCanonT_prop : forall z, IsHProp (sigT (zCanon z)).
@@ -196,16 +196,16 @@ intros.
 destruct (le_linear a b) as [H | H];apply le_exists in H;destruct H as [k []].
 exists (0, k). split.
 apply z_related_classes_eq. red;red. simpl.
-path_via (gop k a). apply sg_comm.
+path_via (k + a). apply commutative;apply nat_issemiring.
 apply min1. left;reflexivity.
 exists (k,0). split.
 apply z_related_classes_eq;red;red;simpl. apply nplus_0_r.
 apply min1;right;reflexivity.
 Defined.
 
-Definition z_canon_rect : forall P : ZRing -> Type, 
-(forall a, P (z_class a 0)) -> 
-(forall b, P (z_class 0 b)) ->
+Definition z_canon_rect : forall P : Z -> Type, 
+(forall a, P [a, 0]) -> 
+(forall b, P [0, b]) ->
 forall z, P z.
 Proof.
 intros ? H H' ?.
@@ -215,23 +215,24 @@ apply zCanon_or in Hc. destruct x as [a b];simpl in Hc;destruct Hc as [He | He];
 apply inverse in He;destruct He;eauto.
 Defined.
 
-Definition eq_z_dec : decidable_paths ZRing.
+Definition eq_z_dec : decidable_paths Z.
 Proof.
 red.
 intros.
 destruct (canonT x) as [rx Hx].
 destruct (canonT y) as [ry Hy].
 destruct (prod_eq_dec _ eq_nat_dec _ eq_nat_dec rx ry).
-- left. path_via (quotIn rx). apply Hx.
-  path_via (quotIn ry). apply ap;assumption.
+- left. path_via (quotIn (+) rx). apply Hx.
+  path_via (quotIn (+) ry). apply ap;assumption.
   symmetry;apply Hy.
 - right. intro Hn. destruct Hn. apply n. eapply zCanon_atmost;eauto.
 Defined.
 
+
 End NotaSec.
 
-Notation z0 := (@Zero ZRing).
-Notation z1 := (@One ZRing).
+Notation z0 := (@ZeroV Z ZPrering ZRing).
+Notation z1 := (@OneV Z ZPrering ZRing).
 
 End Relative.
 

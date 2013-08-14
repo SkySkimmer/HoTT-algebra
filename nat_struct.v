@@ -15,7 +15,7 @@ Fixpoint nplus (n m : nat) : nat := match n with
   | 0 => m
   end.
 
-Global Instance nat_plus : Plus nat := nplus.
+Instance nat_plus : Plus nat := nplus.
 
 Definition npred (n : nat) : nat := match n with
   | S k => k
