@@ -105,7 +105,10 @@ intros. apply related_classes_eq. apply gopU_respects;assumption.
 Defined.
 
 Definition quotU_rect := @quotient_rect _ equivU.
-Definition quotU_ind := @quotient_rect_prop _ equivU.
+Definition quotU_ind : forall P : quotU -> Type,
+       (forall q, IsHProp (P q)) ->
+       (forall x : G * G, P (quotIn x)) ->
+       forall q, P q := @quotient_rect_prop _ equivU.
 
 Instance quotAssoc : forall {Hsg : IsSemigroup L}, Associative (quotOp).
 Proof.
@@ -226,7 +229,7 @@ Lemma quotIn_lcancel : forall {Hsg : IsSemigroup L},
  forall x a b : G, quotIn (gop x a, gop x b) = quotIn (a, b).
 Proof.
 intros. apply related_classes_eq. red. simpl.
-ssrapply (@ast_use G L). reflexivity.
+ssrapply (@ast_use G L _ paths). reflexivity.
 Defined.
 
 (*
@@ -326,7 +329,7 @@ reflexivity.
 pattern (xa + yb). eapply transport. symmetry. apply H.
 pattern (xb + ya). apply transport with (xa + yb).
 path_via (ya + xb). apply (@commutative _ (+) _).
-ssrapply (@ast2_full_semiring G _);reflexivity.
+ssrapply (@ast2_full_semiring G _ _ paths);reflexivity.
 Defined.
 
 Definition multR : Mult (quotU (+)).
@@ -425,7 +428,7 @@ intro c.
 
 apply (ap (quotIn (+))).
 apply path_prod';
-ssrapply (@ast2_full_semiring G _);
+ssrapply (@ast2_full_semiring G _ _ paths);
 reflexivity.
 Defined.
 
@@ -482,17 +485,17 @@ apply Hreg with (gop xb0 yb0).
 pattern (gop (gop xb0 yb0) (gop xa yb)). apply transport with
 (gop (gop xb yb) (gop xa0 yb0)).
 path_via (gop (gop xa0 xb) (gop yb0 yb)).
-ssrapply (@ast_use G (&));try reflexivity. apply Hmon.
+ssrapply (@ast_use G (&) Hmon paths);reflexivity.
 path_via (gop (gop xa xb0) (gop yb0 yb)).
 apply (@ap _ _ (fun g => gop g _) (xa0 & xb)). assumption.
-ssrapply (@ast_use G (&));try reflexivity. apply Hmon.
+ssrapply (@ast_use G (&) Hmon paths);reflexivity.
 pattern (gop (gop xb0 yb0) (gop ya xb)). apply transport with
 (gop (gop xb yb) (gop ya0 xb0)).
 path_via (gop (gop xb0 xb) (gop ya0 yb)).
-ssrapply (@ast_use G (&));try reflexivity. apply Hmon.
+ssrapply (@ast_use G (&) Hmon paths);reflexivity.
 path_via (gop (gop xb0 xb) (gop ya yb0)).
 apply ap. assumption.
-ssrapply (@ast_use G (&));try reflexivity. apply Hmon.
+ssrapply (@ast_use G (&) Hmon paths);reflexivity.
 
 apply Hcompat. assumption.
 Defined.
@@ -542,9 +545,9 @@ unfold rrel in H; simpl in H. unfold rrel;simpl.
 apply quotRel_repr in H. apply repr_quotRel.
 unfold gopU;simpl. red;red in H;simpl;simpl in H.
 pattern (gop (gop za xa) (gop zb yb)). apply transport with
-(gop (gop za zb) (gop xa yb)). ssrapply (@ast_use G L);reflexivity.
+(gop (gop za zb) (gop xa yb)). ssrapply (@ast_use G L _ paths);reflexivity.
 pattern (gop (gop za ya) (gop zb xb)). apply transport with
-(gop (gop za zb) (gop ya xb)). ssrapply (@ast_use G L);reflexivity.
+(gop (gop za zb) (gop ya xb)). ssrapply (@ast_use G L _ paths);reflexivity.
 apply Hcompat. assumption.
 Defined.
 
@@ -583,7 +586,105 @@ pattern x;apply transport with (gop x gidV). apply gid.
 apply H.
 Defined.
 
-End WithRel.
+Global Instance quotrel_refl {Hrefl : @Reflexive G (~>)} : Reflexive quotRel.
+Proof.
+red;apply quotU_ind. apply _.
+intros. apply repr_quotRel. red. apply Hrefl.
+Defined.
+
+Global Instance quotrel_trans {Htrans : @Transitive G (~>)} : Transitive quotRel.
+Proof.
+red.
+apply (quotU_ind _ (fun x => forall y z, _ -> _ -> _) _).
+intro x. apply (quotU_ind _ (fun y => forall z, _ -> _ -> _) _).
+intro y. apply (quotU_ind _ (fun z => _ -> _ -> _) _).
+intro z.
+
+intros H H'.
+apply quotRel_repr in H.
+apply quotRel_repr in H'.
+apply repr_quotRel.
+red in H,H'. red.
+apply Hreg with (snd y).
+pattern (snd y & (fst x & snd z));
+apply transport with (snd z & (fst x & snd y)).
+ssrapply (@ast_use G (&) Hmon paths);reflexivity.
+pattern (snd y & (fst z & snd x)).
+apply transport with (snd x & (fst z & snd y)).
+ssrapply (@ast_use G (&) Hmon paths);reflexivity.
+eapply Htrans. apply Hcompat. apply H.
+pattern (snd z & (fst y & snd x)).
+apply transport with (snd x & (fst y & snd z)).
+ssrapply (@ast_use G (&) Hmon paths);reflexivity.
+apply Hcompat;apply H'.
+Defined.
+
+Global Instance quotrel_symm {Hsymm : @Symmetric G (~>)} : Symmetric quotRel.
+Proof.
+red. apply (quotU_ind _ (fun x => forall y, _ -> _) _).
+intro x. apply (quotU_ind _ (fun y => _ -> _) _).
+intro y.
+intros H.
+
+apply quotRel_repr in H.
+apply repr_quotRel.
+red in H;red.
+apply Hsymm;assumption.
+Defined.
+
+Global Instance quotrel_antisymm {Ha : @Antisymmetric G (~>)}
+ : Antisymmetric quotRel.
+Proof.
+red.
+unfold leq. apply (quotU_ind _ (fun x => forall y, _ -> _ -> _) _).
+intro x. apply (quotU_ind _ (fun y => _ -> _ -> _) _).
+intro y.
+intros H H'.
+apply quotRel_repr in H. apply quotRel_repr in H'.
+red in H,H'.
+apply related_classes_eq. red.
+apply Ha;assumption.
+Defined.
+
+Global Instance quotrel_poset {Hpo : @Poset G (~>)} : Poset quotRel.
+Proof.
+split.
+apply @quotrel_trans;apply Hpo.
+apply @quotrel_refl;apply Hpo.
+apply @quotrel_antisymm;apply Hpo.
+Defined.
+
+(* note: we can't get constrlinear unless we go through linear + decidable *)
+
+Global Instance quotrel_linear {Hto : @Linear G (~>)} : Linear quotRel.
+Proof.
+red. apply (quotU_ind _ (fun x => forall y, _) _).
+intro x. apply quotU_ind. apply _.
+intro y.
+pose (H:=Hto (fst x & snd y) (fst y & snd x)). clearbody H;revert H.
+apply minus1Trunc_rect_nondep;[|apply minus1Trunc_is_prop].
+intros H;apply min1;destruct H as [H|H].
+left. apply repr_quotRel. assumption.
+right. apply repr_quotRel. assumption.
+Defined.
+
+Global Instance quotrel_dec {Hdec : @Decidable G (~>)} : Decidable quotRel.
+Proof.
+red.
+assert (forall x y : quotU L, IsHProp ((x ~> y) + (~ x ~> y))).
+intros. apply hprop_allpath. intros [x0|x0] [y0|y0].
+apply ap. apply minus1Trunc_is_prop.
+destruct y0;assumption. destruct x0;assumption.
+apply ap. assert (IsHProp (~ x ~> y));[apply _|]. apply X.
+
+apply (quotU_ind _ (fun x => forall y, _) _).
+intro x. apply quotU_ind. apply _.
+intro y.
+
+destruct (Hdec (fst x & snd y) (fst y & snd x)).
+left. apply repr_quotRel. assumption.
+right. intro H. apply quotRel_repr in H. apply n;assumption.
+Defined.
 
 End GroupOfCMono.
 
