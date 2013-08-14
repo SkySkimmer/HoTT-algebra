@@ -80,6 +80,7 @@ Class ApartLt T := apartlt : RR_Class T.
 Instance apartlt_apart : forall {T}, ApartLt T -> Apart T := RR_R1.
 Instance apartlt_lt : forall {T}, ApartLt T -> Lt T := RR_R2.
 
+Notation "(<> <)" := apartlt (only parsing).
 
 Class LeqLt T := leqlt : RR_Class T.
 
@@ -240,18 +241,22 @@ id_is_right :> Right_id G e
 }.
 
 Class Identity {T:Type} (G : Gop T) := BuildIdentity {
-gid : T;
-identity_pr :> IsId G gid
+g_id : T;
+g_idP :> IsId G g_id
 }.
-Existing Instance identity_pr.
+Existing Instance g_idP.
 
-Arguments gid {_ _} _.
-Arguments identity_pr {_ _} _.
+Arguments g_id {_ _ _}.
+Arguments g_idP {_ _ _}.
 
 Class IsMonoid {T} (G : Gop T) := BuildIsMonoid {
 monoid_is_sg :> IsSemigroup G;
 monoid_id :> Identity G
 }.
+
+Definition gid {T} {G : Gop T} {Hg : IsMonoid G} : Identity G := _.
+Definition gidV {T} {G : Gop T} {Hg : IsMonoid G} : T := @g_id _ _ gid.
+Instance gidP {T} {G : Gop T} {Hg : IsMonoid G} : IsId G gidV := _.
 
 Class Lcancel {T} (G : Gop T) (a : T) : Type := left_cancel : 
 forall b c : T, gop a b = gop a c -> b = c.
@@ -285,11 +290,23 @@ inverse_left :> Linverse G x y;
 inverse_right :> Rinverse G x y
 }.
 
+Record Inverse {T} (G : Gop T) (x : T) := BuildInverse {
+inverse_val : T;
+inverse_pr : IsInverse G x inverse_val
+}.
+Existing Instance inverse_pr.
+
+Arguments inverse_val {_ _ _} _.
+
 Class IsGroup {T} (G : Gop T) := BuildIsGroup {
 group_is_cmonoid :> IsCMonoid G;
-gopp : T -> T;
-goppP :> forall x, IsInverse G x (gopp x)
+gopp : forall x, Inverse G x
 }.
+
+Definition goppV : forall {T} {G : Gop T} {Hg : IsGroup G}, T -> T
+ := fun T G Hg x => inverse_val (gopp x).
+Instance goppP : forall {T} {G : Gop T} {Hg : IsGroup G}, forall x:T,
+ IsInverse G x (goppV x) := _.
 
 Class IsMorphism {T} (G : Gop T) {T'} (G' : Gop T') (f : T -> T')
  := ismorphism : forall x y, f (gop x y) = gop (f x) (f y).
@@ -471,7 +488,7 @@ lt_iff_le_apart : forall x y : T, x < y <-> (x <= y /\ x <> y)
 }.
 
 Class FullPseudoOrder {T} (R : FullRelation T) := BuildFullPseudoOrder {
-fullpseudoorder_pseudo :> PseudoOrder _;
+fullpseudoorder_pseudo :> PseudoOrder (<> <);
 le_iff_not_lt_flip : forall x y : T, x <= y <-> ~ y < x
 }.
 
@@ -554,32 +571,39 @@ semiring_mult :> IsMonoid (°);
 semiring_distributes :> Distributes L
 }.
 
-Definition Zero {G} {L : Prering G} {H : IsSemiring L} : Identity (+) := _.
-Definition ZeroV {G} {L : Prering G} {H : IsSemiring L} : G := gid Zero.
+Definition Zero {G} {L : Prering G} {H : IsSemiring L} : Identity (+)
+ := @gid _ (+) _.
+Definition ZeroV {G} {L : Prering G} {H : IsSemiring L} : G := @gidV _ (+) _.
+Instance ZeroP {G} {L : Prering G} {H : IsSemiring L} : IsId (+) ZeroV
+ := gidP.
 
-Definition One {G} {L : Prering G} {H : IsSemiring L} : Identity (°) := _.
-Definition OneV {G} {L : Prering G} {H : IsSemiring L} : G := gid One.
+Definition One {G} {L : Prering G} {H : IsSemiring L} : Identity (°)
+ := @gid _ (°) _.
+Definition OneV {G} {L : Prering G} {H : IsSemiring L} : G := @gidV _ (°) _.
+Instance OneP {G} {L : Prering G} {H : IsSemiring L} : IsId (°) OneV
+ := gidP.
 
 Class IsRing {G} (L : Prering G) := BuildIsRing {
 ring_is_semir :> IsSemiring L;
-r_opp : G -> G;
-r_oppP : forall x, IsInverse (+) x (r_opp x)
+r_opp : forall x, Inverse (+) x
 }.
 
 Instance ring_is_group : forall {T} (G : Prering T) {Hr : IsRing G},
  IsGroup (+).
 Proof.
-intros;apply BuildIsGroup with r_opp. apply _.
-apply r_oppP.
+intros;apply BuildIsGroup. apply _.
+apply r_opp.
 Defined.
 
 Definition ropp {T} {L : Prering T} {G : IsRing L}
- : T -> T := gopp.
+ : forall x, Inverse (+) x := gopp.
 
-Instance roppP : forall {T} {L : Prering T} {G : IsRing L} x,
- IsInverse (+) x (ropp x) := _.
+Definition roppV : forall {T} {L : Prering T} {G : IsRing L}, T -> T
+ := fun T L G => goppV.
+Instance roppP {T} {L : Prering T} {G : IsRing L} : forall x:T,
+ IsInverse (+) x (roppV x) := goppP.
 
-Class IsIntegralDomain {T} {L : Prering T}
+Class IsIntegralDomain {T} (L : Prering T)
  := BuildIsIntegralDomain {
 integral_ring :> IsRing L;
 integral_pr :> forall a : T, neq ZeroV a -> forall b : T, neq ZeroV b ->
@@ -587,7 +611,7 @@ integral_pr :> forall a : T, neq ZeroV a -> forall b : T, neq ZeroV b ->
 intdom_neq : @neq T ZeroV OneV
 }.
 
-Class IsStrictIntegral {T} {L : Prering T} {G : IsSemiring L}
+Class IsStrictIntegral {T} (L : Prering T) {G : IsSemiring L}
  := isstrictintegral : forall a b : T, ZeroV = a°b
    -> minus1Trunc (ZeroV=a \/ ZeroV=b).
 
@@ -663,10 +687,14 @@ field_is_ring :> IsRing (+ °);
 field_add :> IsBinRegular (+ <>);
 field_mult :> IsBinRegular (° <>);
 field_neq : @apart F _ ZeroV OneV;
-f_inv : forall x : F, ZeroV <> x -> F;
-f_invP : forall (x : F) (H : ZeroV <> x), IsInverse (°) x (f_inv x H);
-field_inv_back : forall x : F, sigT (IsInverse (°) x) -> ZeroV <> x
+finv : forall x : F, ZeroV <> x -> Inverse (°) x;
+field_inv_neq : forall x, Inverse (°) x -> ZeroV <> x
 }.
+
+Definition finvV {F} {L : Prefield F} {Hf : IsField L}
+ : forall x : F, ZeroV <> x -> F := fun x H => inverse_val (finv x H).
+Instance finvP {F} {L : Prefield F} {Hf : IsField L}
+ : forall (x : F) (H :ZeroV <> x), IsInverse (°) x (finvV x H) := _.
 
 End Field.
 
