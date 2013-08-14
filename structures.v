@@ -51,7 +51,7 @@ Export Symbols.
 
 (*********** PRERING ******************)
 
-Record LL_Class (T : Type) := BuildLL_Class {
+Record LL_Class T := BuildLL_Class {
 LL_L1 : law T;
 LL_L2 : law T
 }.
@@ -59,6 +59,8 @@ LL_L2 : law T
 Class Prering (T : Type) := prering : LL_Class T.
 Instance prering_plus : forall {T}, Prering T -> Plus T := LL_L1.
 Instance prering_mult : forall {T}, Prering T -> Mult T := LL_L2.
+Coercion prering_plus : Prering >-> Plus.
+Coercion prering_mult : Prering >-> Mult.
 
 Notation "(+ °)" := prering (only parsing).
 
@@ -79,13 +81,19 @@ Class ApartLt T := apartlt : RR_Class T.
 
 Instance apartlt_apart : forall {T}, ApartLt T -> Apart T := RR_R1.
 Instance apartlt_lt : forall {T}, ApartLt T -> Lt T := RR_R2.
+Coercion apartlt_apart : ApartLt >-> Apart.
+Coercion apartlt_lt : ApartLt >-> Lt.
 
 Notation "(<> <)" := apartlt (only parsing).
 
 Class LeqLt T := leqlt : RR_Class T.
 
+Notation "(<= <)" := leqlt (only parsing).
+
 Instance leqlt_leq : forall {T}, LeqLt T -> Leq T := RR_R1.
 Instance leqlt_lt  : forall {T}, LeqLt T -> Lt T := RR_R2.
+Coercion leqlt_leq : LeqLt >-> Leq.
+Coercion leqlt_lt : LeqLt >-> Lt.
 
 (* define others as needed *)
 
@@ -103,13 +111,16 @@ RRR_R3 : relation T
 
 Class FullRelation T := fullrelation : RRR_Class T.
 
+Notation "(<> <= <)" := fullrelation (only parsing).
+
 Instance fullrel_apartlt {T} (R : FullRelation T) : ApartLt T
  := BuildRR_Class T (RRR_R1 T R) (RRR_R3 T R).
-(*canonical structure? coercion?*)
+Coercion fullrel_apartlt : FullRelation >-> ApartLt.
 
 Instance fullrel_apart {T} (R : FullRelation T) : Apart T := _.
 Instance fullrel_lt {T} (R : FullRelation T) : Lt T := _.
 Instance fullrel_leq {T} (R : FullRelation T) : Leq T := RRR_R2 T R.
+Coercion fullrel_leq : FullRelation >-> Leq.
 
 (***************** LR ***********************)
 
@@ -120,24 +131,30 @@ LR_R : relation T
 
 Class OpRel T := oprel : LR_Class T.
 
+Notation "(& ~>)" := oprel (only parsing).
+
 Instance oprel_op : forall {T}, OpRel T -> Gop T := LR_L.
 Instance oprel_rel : forall {T}, OpRel T -> Rel T := LR_R.
-
+Coercion oprel_op : OpRel >-> Gop.
+Coercion oprel_rel : OpRel >-> Rel.
 
 Class PlusApart T := plusapart : OpRel T.
 
-Notation "(+ <>)" := plusapart.
+Notation "(+ <>)" := plusapart (only parsing).
 
 Instance plusapart_plus : forall {T}, PlusApart T -> Plus T := @oprel_op.
 Instance plusapart_apart : forall {T}, PlusApart T -> Apart T := @oprel_rel.
+Coercion plusapart_plus : PlusApart >-> Plus.
+Coercion plusapart_apart : PlusApart >-> Apart.
 
 Class MultApart T := multapart : OpRel T.
 
-Notation "(° <>)" := multapart.
+Notation "(° <>)" := multapart (only parsing).
 
 Instance multapart_mult : forall {T}, MultApart T -> Mult T := @oprel_op.
 Instance multapart_apart : forall {T}, MultApart T -> Apart T := @oprel_rel.
-
+Coercion multapart_mult : MultApart >-> Mult.
+Coercion multapart_apart : MultApart >-> Apart.
 
 (*others as needed*)
 
@@ -150,20 +167,43 @@ LLR_R : relation T
 }.
 
 Class PreringRel T := preringrel : LLR_Class T.
+Notation "(+ ° ~>)" := preringrel (only parsing).
+
 Class Prefield T := prefield :> PreringRel T.
+Coercion prefield : Prefield >-> PreringRel.
+Notation "(+ ° <>)" := prefield (only parsing).
 
 Instance preringrel_prering {T} (G : PreringRel T) : Prering T :=
 BuildLL_Class _ (LLR_L1 _ G) (LLR_L2 _ G).
+Coercion preringrel_prering : PreringRel >-> Prering.
 
 Instance preringrel_rel : forall {T}, PreringRel T -> Rel T := LLR_R.
+Coercion preringrel_rel : PreringRel >-> Rel.
 
 Instance prefieldApart : forall {T}, Prefield T -> Apart T := @preringrel_rel.
+Coercion prefieldApart : Prefield >-> Apart.
 
 Instance prefield_plusapart : forall {T}, Prefield T -> PlusApart T
  := fun T L => BuildLR_Class T (+) (<>).
 Instance prefield_multapart : forall {T}, Prefield T -> MultApart T
  := fun T L => BuildLR_Class T (°) (<>).
+Coercion prefield_plusapart : Prefield >-> PlusApart.
+Coercion prefield_multapart : Prefield >-> MultApart.
 
+
+Class PreringLeq T := preringleq :> PreringRel T.
+Coercion preringleq : PreringLeq >-> PreringRel.
+Notation "(+ ° <=)" := preringleq (only parsing).
+
+Instance preringleq_leq : forall {T}, PreringLeq T -> Leq T := @preringrel_rel.
+Coercion preringleq_leq : PreringLeq >-> Leq.
+
+Class PreringLt T := preringlt :> PreringRel T.
+Coercion preringlt : PreringLt >-> PreringRel.
+Notation "(+ ° <)" := preringlt (only parsing).
+
+Instance preringlt_lt : forall {T}, PreringLt T -> Lt T := @preringrel_rel.
+Coercion preringlt_lt : PreringLt >-> Lt.
 
 (****************** LLRR *******************)
 
@@ -179,12 +219,19 @@ LLRR_R2 : relation T
 }.
 
 Class PreringStrict T := preringstrict : LLRR_Class T.
+Notation "(+ ° <> <)" := preringstrict (only parsing).
 
 Instance preringstrict_prefield : forall {T}, PreringStrict T -> Prefield T
  := fun T G => BuildLLR_Class T (LLRR_L1 T G) (LLRR_L2 T G) (LLRR_R1 T G).
+Coercion preringstrict_prefield : PreringStrict >-> Prefield.
+
+Instance preringstrict_preringlt : forall {T}, PreringStrict T -> PreringLt T
+ := fun T G => BuildLLR_Class T (LLRR_L1 T G) (LLRR_L2 T G) (LLRR_R2 T G).
+Coercion preringstrict_preringlt : PreringStrict >-> PreringLt.
 
 Instance preringstrict_strict :  forall {T}, PreringStrict T -> ApartLt T
  := fun T G => BuildRR_Class T (LLRR_R1 T G) (LLRR_R2 T G).
+Coercion preringstrict_strict : PreringStrict >-> ApartLt.
 
 (* etc *)
 
@@ -203,13 +250,16 @@ LLRRR_R3 : relation T
 }.
 
 Class PreringFull T := preringfull : LLRRR_Class T.
+Notation "(+ ° <> <= <)" := preringfull (only parsing).
+
+Instance preringfull_fullrel : forall {T}, PreringFull T -> FullRelation T
+ := fun T G => BuildRRR_Class T (LLRRR_R1 T G) (LLRRR_R2 T G) (LLRRR_R3 T G).
+Coercion preringfull_fullrel : PreringFull >-> FullRelation.
 
 Instance preringfull_strict : forall {T}, PreringFull T -> PreringStrict T
  := fun T G => BuildLLRR_Class T (LLRRR_L1 T G) (LLRRR_L2 T G)
                                  (LLRRR_R1 T G) (LLRRR_R3 T G).
-
-Instance preringfull_fullrel : forall {T}, PreringFull T -> FullRelation T
- := fun T G => BuildRRR_Class T (LLRRR_R1 T G) (LLRRR_R2 T G) (LLRRR_R3 T G).
+Coercion preringfull_strict : PreringFull >-> PreringStrict.
 
 (* etc *)
 
@@ -219,58 +269,86 @@ End Signatures.
 Module Magma.
 Export Signatures.
 
-Class Associative {T} (G : Gop T) := associative : 
+Section Magma.
+
+Context {T : Type}. Variable G : Gop T.
+
+Class Associative := associative : 
 forall x y z : T, gop x (gop y z) = gop (gop x y) z.
 
-Class Commutative {T} (G : Gop T) := commutative : 
+Class Commutative := commutative : 
 forall x y : T, gop x y = gop y x.
 
-Class IsSemigroup {T} (G : Gop T) := BuildIsSemigroup {
-sg_assoc :> Associative G;
-sg_comm :> Commutative G
+Class IsSemigroup := BuildIsSemigroup {
+sg_assoc :> Associative;
+sg_comm :> Commutative
 }.
 
-Class Left_id {T} (G : Gop T) (e : T) := left_id : 
+Coercion sg_assoc : IsSemigroup >-> Associative.
+Coercion sg_comm : IsSemigroup >-> Commutative.
+
+Section Identity.
+
+Variable e : T.
+
+Class Left_id := left_id : 
 forall x : T, gop e x = x.
-Class Right_id {T} (G : Gop T) (e : T) := right_id : 
+Class Right_id := right_id : 
 forall x : T, gop x e = x.
 
-Class IsId {T} (G : Gop T) (e : T) := BuildIsId {
-id_is_left :> Left_id G e;
-id_is_right :> Right_id G e
+Class IsId := BuildIsId {
+id_is_left :> Left_id;
+id_is_right :> Right_id
 }.
 
-Class Identity {T:Type} (G : Gop T) := BuildIdentity {
+Coercion id_is_left : IsId >-> Left_id.
+Coercion id_is_right : IsId >-> Right_id.
+
+End Identity.
+
+Class Identity := BuildIdentity {
 g_id : T;
-g_idP :> IsId G g_id
+g_idP :> IsId g_id
 }.
 Existing Instance g_idP.
+Coercion g_id : Identity >-> T. (*NB: only for this section *)
 
-Arguments g_id {_ _ _}.
-Arguments g_idP {_ _ _}.
-
-Class IsMonoid {T} (G : Gop T) := BuildIsMonoid {
-monoid_is_sg :> IsSemigroup G;
-monoid_id :> Identity G
+Class IsMonoid := BuildIsMonoid {
+monoid_is_sg :> IsSemigroup ;
+monoid_id :> Identity
 }.
 
-Definition gid {T} {G : Gop T} {Hg : IsMonoid G} : Identity G := _.
-Definition gidV {T} {G : Gop T} {Hg : IsMonoid G} : T := @g_id _ _ gid.
-Instance gidP {T} {G : Gop T} {Hg : IsMonoid G} : IsId G gidV := _.
+Coercion monoid_is_sg : IsMonoid >-> IsSemigroup.
 
-Class Lcancel {T} (G : Gop T) (a : T) : Type := left_cancel : 
+Definition gid {Hg : IsMonoid} : Identity := _.
+Definition gidV {Hg : IsMonoid} : T := @g_id gid.
+Global Instance gidP {Hg : IsMonoid} : IsId gidV := _.
+
+Section Cancel.
+
+Variable a : T.
+
+Class Lcancel : Type := left_cancel : 
 forall b c : T, gop a b = gop a c -> b = c.
-Class Rcancel {T} (G : Gop T) (a : T) : Type := right_cancel : 
+Class Rcancel : Type := right_cancel : 
 forall b c : T, gop b a = gop c a -> b = c.
-Class Cancel {T} (G : Gop T) (a : T) : Type := BuildCancel {
-Left_cancel :> Lcancel G a;
-Right_cancel :> Rcancel G a
+Class Cancel : Type := BuildCancel {
+Left_cancel :> Lcancel;
+Right_cancel :> Rcancel
 }.
 
-Class IsCMonoid {T} (G : Gop T) := BuildIsCMonoid {
-cmonoid_is_monoid :> IsMonoid G;
-cmonoid_cancel :> forall a : T, Cancel G a
+Coercion Left_cancel : Cancel >-> Lcancel.
+Coercion Right_cancel : Cancel >-> Rcancel.
+
+End Cancel.
+
+Class IsCMonoid := BuildIsCMonoid {
+cmonoid_is_monoid :> IsMonoid;
+cmonoid_cancel :> forall a : T, Cancel a
 }.
+
+Coercion cmonoid_is_monoid : IsCMonoid >-> IsMonoid.
+Coercion cmonoid_cancel : IsCMonoid >-> Funclass.
 
 (*
 Usually we would require G to be a monoid, with the left_inverse property being gop x y = gid
@@ -280,36 +358,57 @@ By doing things this way, we gain
   if we need gop x y = gid we use unicity of identity elements, then since IsId is a class instance resolution suffices
   if we need gop (gop x y) z = z we directly apply the IsInverse hypothesis
 *)
-Class Linverse {T} (G : Gop T) (x y : T) : Type
- := left_inverse :> IsId G (gop x y).
-Class Rinverse {T} (G : Gop T) (x y : T) : Type
- := right_inverse :> IsId G (gop y x).
+Section Inverse.
 
-Class IsInverse {T} (G : Gop T) (x y : T) : Type := BuildIsInverse {
-inverse_left :> Linverse G x y;
-inverse_right :> Rinverse G x y
+Variables (x y : T).
+
+Class Linverse := left_inverse :> IsId (gop x y).
+Class Rinverse := right_inverse :> IsId (gop y x).
+
+Class IsInverse := BuildIsInverse {
+inverse_left :> Linverse;
+inverse_right :> Rinverse
 }.
 
-Record Inverse {T} (G : Gop T) (x : T) := BuildInverse {
+Coercion inverse_left : IsInverse >-> Linverse.
+Coercion inverse_right : IsInverse >-> Rinverse.
+
+End Inverse.
+
+Record Inverse x := BuildInverse {
 inverse_val : T;
-inverse_pr : IsInverse G x inverse_val
+inverse_pr : IsInverse x inverse_val
 }.
-Existing Instance inverse_pr.
+Global Existing Instance inverse_pr.
 
-Arguments inverse_val {_ _ _} _.
+Coercion inverse_val : Inverse >-> T.
 
-Class IsGroup {T} (G : Gop T) := BuildIsGroup {
-group_is_cmonoid :> IsCMonoid G;
-gopp : forall x, Inverse G x
+Class IsGroup := BuildIsGroup {
+group_is_cmonoid :> IsCMonoid;
+gopp : forall x, Inverse x
 }.
 
-Definition goppV : forall {T} {G : Gop T} {Hg : IsGroup G}, T -> T
- := fun T G Hg x => inverse_val (gopp x).
-Instance goppP : forall {T} {G : Gop T} {Hg : IsGroup G}, forall x:T,
- IsInverse G x (goppV x) := _.
+Coercion group_is_cmonoid : IsGroup >-> IsCMonoid.
+
+Definition goppV : forall {Hg : IsGroup}, T -> T
+ := fun Hg x => inverse_val _ (gopp x).
+Global Instance goppP : forall {Hg : IsGroup}, forall x:T,
+ IsInverse x (goppV x) := _.
 
 Class IsMorphism {T} (G : Gop T) {T'} (G' : Gop T') (f : T -> T')
  := ismorphism : forall x y, f (gop x y) = gop (f x) (f y).
+
+End Magma.
+
+Arguments inverse_val {_ _ _} _.
+
+Arguments gopp {_ _ _} _.
+Arguments goppV {_ _ _} _.
+Arguments goppP {_ _ _} _.
+
+Arguments gid {_ _ _}.
+Arguments gidV {_ _ _}.
+Arguments gidP {_ _ _}.
 
 End Magma.
 
@@ -325,6 +424,10 @@ equivalence_symm :> Symmetric R;
 equivalence_trans :> Transitive R
 }.
 
+Coercion equivalence_refl  : Equivalence >-> Reflexive.
+Coercion equivalence_symm  : Equivalence >-> Symmetric.
+Coercion equivalence_trans : Equivalence >-> Transitive.
+
 Class Antisymmetric {T} (R : Leq T) :=
  antisymmetric : forall x y : T, x <= y -> y <= x -> x=y.
 
@@ -334,11 +437,19 @@ Class StrongAntisymmetric {T : Type} (R : Lt T) :=
 Class Irreflexive {T} (R : Rel T) := 
  irrefl : forall x : T, rrel x x -> Empty.
 
+(*
+Putting leq here means that when we unfold rrel in Transitive's definition, it unfolds to leq (as opposed to R)
+This allows us to recover notations easily
+*)
 Class Poset {T} (R : Leq T) := BuildPoset {
-order_trans :> Transitive R;
-order_refl :> Reflexive R;
+order_trans :> Transitive leq;
+order_refl :> Reflexive leq;
 order_antisymm :> Antisymmetric R
 }.
+
+Coercion order_trans : Poset >-> Transitive.
+Coercion order_refl  : Poset >-> Reflexive.
+Coercion order_antisymm : Poset >-> Antisymmetric.
 
 (*NB: do not use < here, it becomes ambiguous when used with an apartness relation*)
 Class Cotransitive {T} (R : Rel T) := 
@@ -346,11 +457,15 @@ Class Cotransitive {T} (R : Rel T) :=
    minus1Trunc (rrel x z \/ rrel z y).
 
 Class Apartness {T} (R : Apart T) := BuildApartness {
-apart_irrefl :> Irreflexive R;
-apart_symm :> Symmetric R;
-apart_cotrans :> Cotransitive R;
+apart_irrefl :> Irreflexive apart;
+apart_symm :> Symmetric apart;
+apart_cotrans :> Cotransitive apart;
 apart_tight : forall x y : T, ~ x <> y -> x=y
 }.
+
+Coercion apart_irrefl : Apartness >-> Irreflexive.
+Coercion apart_symm : Apartness >-> Symmetric.
+Coercion apart_cotrans : Apartness >-> Cotransitive.
 
 Class Linear {T} (R : Leq T) := 
  islinear : forall x y : T, minus1Trunc (x <= y \/ y <= x).
@@ -368,10 +483,12 @@ Class Decidable {T} (R : Rel T) :=
  decidable : forall x y : T, (rrel x y)+(~rrel x y).
 
 Class StrictOrder {T} (R : Lt T) := BuildStrictOrder {
-strictorder_irrefl :> Irreflexive R;
-strictorder_trans :> Transitive R
+strictorder_irrefl :> Irreflexive lt;
+strictorder_trans :> Transitive lt
 }.
 
+Coercion strictorder_irrefl : StrictOrder >-> Irreflexive.
+Coercion strictorder_trans : StrictOrder >-> Transitive.
 
 Class IsUpper {T} (R : Leq T) (P : T -> Type) (m : T) := 
 isupper : forall x, P x -> x <= m.
@@ -382,11 +499,13 @@ Class IsMaximum {T} (R : Leq T) P (m : T) := BuildIsMaximum {
 maximum_upper :> IsUpper R P m;
 maximum_verifies : P m
 }.
+Coercion maximum_upper : IsMaximum >-> IsUpper.
 
 Class IsMinimum {T} (R : Leq T) P (m : T) := BuildIsMinimum {
 minimum_lower :> IsLower R P m;
 minimum_verifies : P m
 }.
+Coercion minimum_lower : IsMinimum >-> IsLower.
 
 Class IsSupremum {T} (R : Leq T) P (m : T) :=
  issupremum :> IsMinimum R (IsUpper R P) m.
@@ -459,11 +578,15 @@ Class TotalOrder {T} (R : Leq T) := BuildTotalOrder {
 totalorder_poset :> Poset R;
 totalorder_linear :> Linear R
 }.
+Coercion totalorder_poset : TotalOrder >-> Poset.
+Coercion totalorder_linear : TotalOrder >-> Linear.
 
 Class ConstrTotalOrder {T} (R : Leq T) := BuildConstrTotalOrder {
 constrtotalorder_poset :> Poset R;
 constrtotalorder_linear :> ConstrLinear R
 }.
+Coercion constrtotalorder_poset : ConstrTotalOrder >-> Poset.
+Coercion constrtotalorder_linear : ConstrTotalOrder >-> ConstrLinear.
 
 
 (*
@@ -474,24 +597,29 @@ cf math classes for working example (src/interfaces/orders.v > FullPartialOrder)
 *)
 
 Class PseudoOrder {T} (R : ApartLt T) := BuildPseudoOrder {
-pseudoorder_apart :> Apartness (<>);
+pseudoorder_apart :> Apartness R;
 pseudoorder_antisym : forall x y : T, x<y -> y<x -> Empty;
-pseudoorder_cotrans :> Cotransitive (<);
+pseudoorder_cotrans :> Cotransitive lt;
 apart_iff_total_lt : forall x y : T, x <> y <-> (x<y \/ y<x)
 }.
+Coercion pseudoorder_apart : PseudoOrder >-> Apartness.
+Coercion pseudoorder_cotrans : PseudoOrder >-> Cotransitive.
 
 Class FullPoset {T} (R : FullRelation T) := BuildFullPartialOrder {
-fullpartial_apart :> Apartness (<>);
-fullpartial_poset :> Poset (<=);
-fullpartial_trans :> Transitive (<);
+fullpartial_apart :> Apartness R;
+fullpartial_poset :> Poset R;
+fullpartial_trans :> Transitive lt;
 lt_iff_le_apart : forall x y : T, x < y <-> (x <= y /\ x <> y)
 }.
+Coercion fullpartial_apart : FullPoset >-> Apartness.
+Coercion fullpartial_poset : FullPoset >-> Poset.
+Coercion fullpartial_trans : FullPoset >-> Transitive.
 
 Class FullPseudoOrder {T} (R : FullRelation T) := BuildFullPseudoOrder {
-fullpseudoorder_pseudo :> PseudoOrder (<> <);
+fullpseudoorder_pseudo :> PseudoOrder R;
 le_iff_not_lt_flip : forall x y : T, x <= y <-> ~ y < x
 }.
-
+Coercion fullpseudoorder_pseudo : FullPseudoOrder >-> PseudoOrder.
 
 Class IsMorphism {T} (R : Rel T) {T'} (R' : Rel T') (f : T -> T')
  := ismorphism : forall x y, rrel x y -> rrel (f x) (f y).
@@ -502,6 +630,8 @@ Class IsEmbedding {T} (R : Rel T) {T'} (R' : Rel T') (f : T -> T')
 embedding_is_morphism :> IsMorphism R R' f;
 embedding_is_reflecting :> IsReflecting R R' f
 }.
+Coercion embedding_is_morphism : IsEmbedding >-> IsMorphism.
+Coercion embedding_is_reflecting : IsEmbedding >-> IsReflecting.
 
 Class IsBinMorphism {T1} (R1 : Rel T1) {T2} (R2 : Rel T2) {T'} (R' : Rel T')
   (f : T1 -> T2 -> T') := isbinmorphism
@@ -520,31 +650,35 @@ Export Relation.
 
 (* LInvariant: forall z x y, x <= y -> z x <= z y *)
 Class IsLInvariant {G} (R : OpRel G)
- := islinvariant :> forall z : G, IsMorphism (~>) (~>) (gop z).
+ := islinvariant :> forall z : G, IsMorphism R R (gop z).
 Class IsRInvariant {G} (R : OpRel G)
- := isrinvariant :> forall z : G, IsMorphism (~>) (~>) (fun a : G => gop a z).
+ := isrinvariant :> forall z : G, IsMorphism R R (fun a : G => gop a z).
 Class IsInvariant {G} (R : OpRel G) := BuildIsInvariant {
 isinvariant_left :> IsLInvariant R;
 isinvariant_right :> IsRInvariant R
 }.
+Coercion isinvariant_left : IsInvariant >-> IsLInvariant.
+Coercion isinvariant_right : IsInvariant >-> IsRInvariant.
 
 (* Compat: forall x x' y y', x <= x', y <= y' -> x + y <= x' + y' *)
 Class IsCompat {G} (R : OpRel G)
- := iscompat :> IsBinMorphism (~>) (~>) (~>) (&).
+ := iscompat :> IsBinMorphism R R R gop.
 
 (* LRegular a: forall x y, a x <= a y -> x <= y *)
 Class IsLRegular {G} (R : OpRel G) (a : G) :=
- islregular :> IsReflecting (~>) (~>) (gop a).
+ islregular :> IsReflecting R R (gop a).
 Class IsRRegular {G} (R : OpRel G) (a : G) :=
- isrregular :> IsReflecting (~>) (~>) (fun b : G => gop b a).
+ isrregular :> IsReflecting R R (fun b : G => gop b a).
 Class IsRegular {G} (R : OpRel G) (a : G) := BuildIsRegular {
 isreg_left :> IsLRegular R a;
 isreg_right :> IsRRegular R a
 }.
+Coercion isreg_left : IsRegular >-> IsLRegular.
+Coercion isreg_right : IsRegular >-> IsRRegular.
 
 (* BinRegular : forall x x' y y', x+y <= x'+y' -> x<=x' or y<=y' *)
 Class IsBinRegular {G} (R : OpRel G) :=
- isbinregular :> IsBinReflecting (~>) (~>) (~>) (&).
+ isbinregular :> IsBinReflecting R R R gop.
 (*
 NB: in semirings, we expect that (a ° _) is morphism for <= forall a >= 0
 and embedding for < for a > 0
@@ -555,65 +689,85 @@ End OrderedMagma.
 Module Ring.
 Export Magma.
 
+Section Prering.
 
-Class Ldistributes {G} (L : Prering G) := ldistributes : 
+Context {G : Type}.
+Variable L : Prering G.
+
+Class Ldistributes := ldistributes : 
 forall a b c : G, a ° (b+c) = (a°b) + (a°c).
-Class Rdistributes {G} (L : Prering G) := rdistributes : 
+Class Rdistributes := rdistributes : 
 forall a b c : G, (b+c) ° a = (b°a) + (c°a).
-Class Distributes {G} (L : Prering G) := BuildDistributes {
-distributes_left :> Ldistributes L;
-distributes_right :> Rdistributes L
+Class Distributes := BuildDistributes {
+distributes_left :> Ldistributes;
+distributes_right :> Rdistributes
 }.
 
-Class IsSemiring {G} (L : Prering G) := BuildIsSemiring {
+Coercion distributes_left : Distributes >-> Ldistributes.
+Coercion distributes_right : Distributes >-> Rdistributes.
+
+Class IsSemiring := BuildIsSemiring {
 semiring_plus :> IsCMonoid (+);
 semiring_mult :> IsMonoid (°);
-semiring_distributes :> Distributes L
+semiring_distributes :> Distributes
 }.
 
-Definition Zero {G} {L : Prering G} {H : IsSemiring L} : Identity (+)
- := @gid _ (+) _.
-Definition ZeroV {G} {L : Prering G} {H : IsSemiring L} : G := @gidV _ (+) _.
-Instance ZeroP {G} {L : Prering G} {H : IsSemiring L} : IsId (+) ZeroV
- := gidP.
+Coercion semiring_plus : IsSemiring >-> IsCMonoid.
+Coercion semiring_mult : IsSemiring >-> IsMonoid.
+Coercion semiring_distributes : IsSemiring >-> Distributes.
 
-Definition One {G} {L : Prering G} {H : IsSemiring L} : Identity (°)
- := @gid _ (°) _.
-Definition OneV {G} {L : Prering G} {H : IsSemiring L} : G := @gidV _ (°) _.
-Instance OneP {G} {L : Prering G} {H : IsSemiring L} : IsId (°) OneV
- := gidP.
+Definition Zero {H : IsSemiring} : Identity (+) := @gid _ (+) _.
+Definition ZeroV {H : IsSemiring} : G := @gidV _ (+) _.
+Instance ZeroP {H : IsSemiring} : IsId (+) ZeroV := @gidP _ (+) _.
 
-Class IsRing {G} (L : Prering G) := BuildIsRing {
-ring_is_semir :> IsSemiring L;
+Definition One {H : IsSemiring} : Identity (°) := @gid _ (°) _.
+Definition OneV {H : IsSemiring} : G := @gidV _ (°) _.
+Instance OneP {H : IsSemiring} : IsId (°) OneV := @gidP _ (°) _.
+
+Class IsRing := BuildIsRing {
+ring_is_semir :> IsSemiring;
 r_opp : forall x, Inverse (+) x
 }.
+Coercion ring_is_semir : IsRing >-> IsSemiring.
 
-Instance ring_is_group : forall {T} (G : Prering T) {Hr : IsRing G},
+Global Instance ring_is_group : forall {Hr : IsRing},
  IsGroup (+).
 Proof.
 intros;apply BuildIsGroup. apply _.
 apply r_opp.
 Defined.
 
-Definition ropp {T} {L : Prering T} {G : IsRing L}
- : forall x, Inverse (+) x := gopp.
+Definition ropp {Hg : IsRing}
+ : forall x, Inverse (+) x := @gopp _ (+) _.
+Definition roppV {Hg : IsRing} : G -> G := @goppV _ (+) _.
+Instance roppP {Hg : IsRing} : forall x:G, IsInverse (+) x (roppV x)
+ := @goppP _ (+) _.
 
-Definition roppV : forall {T} {L : Prering T} {G : IsRing L}, T -> T
- := fun T L G => goppV.
-Instance roppP {T} {L : Prering T} {G : IsRing L} : forall x:T,
- IsInverse (+) x (roppV x) := goppP.
-
-Class IsIntegralDomain {T} (L : Prering T)
- := BuildIsIntegralDomain {
-integral_ring :> IsRing L;
-integral_pr :> forall a : T, neq ZeroV a -> forall b : T, neq ZeroV b ->
+Class IsIntegralDomain := BuildIsIntegralDomain {
+integral_ring :> IsRing;
+integral_pr :> forall a : G, neq ZeroV a -> forall b : G, neq ZeroV b ->
    neq ZeroV (a°b);
-intdom_neq : @neq T ZeroV OneV
+intdom_neq : @neq G ZeroV OneV
 }.
+Coercion integral_ring : IsIntegralDomain >-> IsRing.
 
-Class IsStrictIntegral {T} (L : Prering T) {G : IsSemiring L}
- := isstrictintegral : forall a b : T, ZeroV = a°b
+Class IsStrictIntegral {Hg : IsSemiring}
+ := isstrictintegral : forall a b : G, ZeroV = a°b
    -> minus1Trunc (ZeroV=a \/ ZeroV=b).
+
+End Prering.
+
+Arguments Zero {_ _ _}.
+Arguments ZeroV {_ _ _}.
+Arguments ZeroP {_ _ _}.
+
+Arguments One {_ _ _}.
+Arguments OneV {_ _ _}.
+Arguments OneP {_ _ _}.
+
+Arguments ropp {_ _ _} _.
+Arguments roppV {_ _ _} _.
+Arguments roppP {_ _ _} _.
 
 End Ring.
 
@@ -680,10 +834,11 @@ dec_inv0 : dec_inv ZeroV = ZeroV;
 dec_inv_ok : forall x : F, neq ZeroV x ->
              IsInverse (°) x (dec_inv x)
 }.
+Coercion decfield_is_ring : IsDecField >-> IsRing.
 
 Class IsField {F} (L : Prefield F) := BuildIsField {
-field_is_apart :> Apartness (<>);
-field_is_ring :> IsRing (+ °);
+field_is_apart :> Apartness L;
+field_is_ring :> IsRing L;
 field_add :> IsBinRegular (+ <>);
 field_mult :> IsBinRegular (° <>);
 field_neq : @apart F _ ZeroV OneV;
@@ -701,45 +856,50 @@ End Field.
 Module OrderedRing.
 Export Ring Relation OrderedMagma.
 
-
-(**TODO**)
-(*
 Class IsPosPreserving {G} (L : PreringRel G)
  := ispospreserving : forall zero : Identity (+),
-      forall x y : G, @rrel G (gid zero) x
-                   -> @rrel G (gid zero) y 
-                   -> @rrel G (gid zero) (x°y).
+                      forall x y : G, rrel (g_id (+)) x
+                                   -> rrel (g_id (+)) y 
+                                   -> rrel (g_id (+)) (x°y).
 
-Class IsSemiringOrder (G : PreringRel) := BuildIsSemiringOrder {
-srorder_po :> IsPoset G;
-srorder_partial_minus : forall x y : G, rrel x y -> exists z, y = x + z;
-srorder_plus :> forall z : G, IsEmbedding (plus z);
-nonneg_mult_compat :> IsPosPreserving G
+Class IsSemiringOrder {G} (L : PreringLeq G) := BuildIsSemiringOrder {
+srorder_po :> Poset L;
+srorder_partial_minus : forall x y : G, x <= y -> exists z, y = x + z;
+srorder_plus :> forall z : G, IsEmbedding L L (plus z);
+nonneg_mult_compat :> IsPosPreserving L
 }.
+Coercion srorder_po : IsSemiringOrder >-> Poset.
+Coercion srorder_plus : IsSemiringOrder >-> Funclass.
 
-Class IsStrictSemiringOrder (G : PreringRel) := BuildIsStrictSemiringOrder {
-strict_srorder_so :> IsStrictOrder G;
-strict_srorder_partial_minus : forall x y : G, rrel x y -> exists z, y = x + z;
-strict_srorder_plus :> forall z : G, IsEmbedding (plus z);
-pos_mult_compat :> IsPosPreserving G
+Class IsStrictSemiringOrder {G} (L : PreringLt G) :=
+ BuildIsStrictSemiringOrder {
+strict_srorder_so :> StrictOrder L;
+strict_srorder_partial_minus : forall x y : G, x < y -> exists z, y = x + z;
+strict_srorder_plus :> forall z : G, IsEmbedding L L (plus z);
+pos_mult_compat :> IsPosPreserving L
 }.
+Coercion strict_srorder_so : IsStrictSemiringOrder >-> StrictOrder.
+Coercion strict_srorder_plus : IsStrictSemiringOrder >-> Funclass.
 
-Class IsPseudoSemiringOrder (G : PreringStrict) := BuildIsPseudoSemiringOrder {
-pseudo_srorder_strict :> IsPseudoOrder G;
+Class IsPseudoSemiringOrder {G} (L : PreringStrict G) :=
+ BuildIsPseudoSemiringOrder {
+pseudo_srorder_strict :> PseudoOrder L;
 pseudo_srorder_partial_minus : forall x y : G, ~y < x -> exists z, y = x + z;
 pseudo_srorder_plus :> forall z : G,
-        @IsEmbedding (RR_to_R2 G) (RR_to_R2 G) (plus z);
-pseudo_srorder_mult_ext :> IsBinRegular (LLRR_to_L2R1 G);
-pseudo_srorder_pos_mult_compat :> IsPosPreserving (LLRR_to_LLR2 G)
+        IsEmbedding (<) (<) (plus z);
+pseudo_srorder_mult_ext :> IsBinRegular (° <>);
+pseudo_srorder_pos_mult_compat :> IsPosPreserving (+ ° <)
 }.
+Coercion pseudo_srorder_strict : IsPseudoSemiringOrder >-> PseudoOrder.
+Coercion pseudo_srorder_plus : IsPseudoSemiringOrder >-> Funclass.
+Coercion pseudo_srorder_mult_ext : IsPseudoSemiringOrder >-> IsBinRegular.
 
-Class FullPseudoSemiringOrder (G : PreringFull) :=
+Class FullPseudoSemiringOrder {G} (L : PreringFull G) :=
   BuildIsFullPseudoSemiringOrder {
-full_pseudo_srorder_pso :> IsPseudoSemiringOrder G;
+full_pseudo_srorder_pso :> IsPseudoSemiringOrder L;
 full_pseudo_srorder_le_iff_not_lt_flip : forall x y : G, x <= y <-> ~y < x
 }.
-*)
-
+Coercion full_pseudo_srorder_pso : FullPseudoSemiringOrder >-> IsPseudoSemiringOrder.
 
 End OrderedRing.
 

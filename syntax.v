@@ -605,7 +605,7 @@ apply (transport _ (inverse Hl)).
     (evalFlat2 f (distribute x2 (ValL l)))).
   pattern (evalFlat2 f (distribute x1 (ValL l)));
   apply (transport _ (inverse IHx1)). simpl. reflexivity.
-  simpl. unfold someMult. eapply concat;[apply @evalNE_app|]. apply sg_assoc.
+  simpl. unfold someMult. eapply concat;[apply @evalNE_app|]. apply _.
   apply ap. apply Hl.
 
 - induction x.
@@ -616,7 +616,7 @@ apply (transport _ (inverse Hl)).
   simpl in *; (path_via (@somePlus A _ None None);
   apply ap11;[apply ap|];assumption).
   simpl.
-  eapply concat. apply (@evalNE_app A (°)). apply sg_assoc.
+  eapply concat. apply (@evalNE_app A (°)). apply _.
   apply ap. assumption.
 
 (* Hleft done *)

@@ -53,7 +53,7 @@ Instance issg_prop : forall {G} {L : Gop G} {Hset : IsHSet G},
 Proof.
 intros G L Hset.
 apply (@trunc_equiv' (sigT (fun _ : Associative L => Commutative L))).
-issig (BuildIsSemigroup G L) (@sg_assoc G L) (@sg_comm G L).
+issig (BuildIsSemigroup L) (@sg_assoc G L) (@sg_comm G L).
 apply @trunc_sigma. apply _. intro. apply _.
 Defined.
 
@@ -62,8 +62,8 @@ IsId L e -> forall e': G, IsId L e' -> e = e'.
 Proof.
 intros.
 apply (@concat _ _ (gop e e')).
- apply inverse;apply right_id.
- apply left_id.
+ apply inverse;apply right_id. apply _.
+ apply left_id. apply _.
 Defined.
 
 Instance id_prop : forall {G} {L : Gop G} {Hset : IsHSet G} e,
@@ -71,7 +71,7 @@ Instance id_prop : forall {G} {L : Gop G} {Hset : IsHSet G} e,
 Proof.
 intros.
 apply (@trunc_equiv' (sigT (fun _ : Left_id L e => Right_id L e))).
-issig (BuildIsId G L e) (@id_is_left G L e) (@id_is_right G L e).
+issig (BuildIsId L e) (@id_is_left G L e) (@id_is_right G L e).
 
 apply @trunc_sigma.
 apply trunc_forall.
@@ -83,13 +83,13 @@ Lemma left_id_id : forall {G} {L : Gop G} {Hg : Commutative L} (e : G),
 Proof.
 intros ? ? ? ? X. split;auto.
 intro.
-eapply concat. apply commutative. apply X.
+eapply concat. apply commutative. apply _. apply X.
 Defined.
 
 
 Definition identity_sig : forall {G} (L : Gop G), sigT (IsId L) <~> Identity L.
 Proof.
-intros; issig (BuildIdentity G L) (@g_id G L) (@g_idP G L).
+intros; issig (BuildIdentity L) (@g_id G L) (@g_idP G L).
 Defined.
 
 Instance gidPop : forall {G} {L : Gop G} {Hset : IsHSet G},
@@ -104,7 +104,7 @@ Defined.
 Definition ismonoid_sig : forall {G} (L : Gop G), sigT (fun _ : IsSemigroup L =>
 Identity L) <~> IsMonoid L.
 Proof.
-intros;issig (BuildIsMonoid G L) (@monoid_is_sg G L) (@monoid_id G L).
+intros;issig (BuildIsMonoid L) (@monoid_is_sg G L) (@monoid_id G L).
 Defined.
 
 Instance ismonoid_prop : forall {G} {L : Gop G} {Hset : IsHSet G},
@@ -130,7 +130,7 @@ Instance cancelling_prop : forall {G} {L : Gop G} {Hset : IsHSet G} a,
 Proof.
 intros.
 apply (@trunc_equiv' (sigT (fun _ : Lcancel L a => Rcancel L a))).
-issig (BuildCancel _ _ a) (@Left_cancel _ _ a) (@Right_cancel _ _ a).
+issig (BuildCancel _ a) (@Left_cancel _ _ a) (@Right_cancel _ _ a).
 apply @trunc_sigma;[|intro C;clear C];apply trunc_forall.
 Defined.
 
@@ -139,7 +139,7 @@ Instance iscmono_prop : forall {G} {L : Gop G} {Hset : IsHSet G},
 Proof.
 intros.
 apply (@trunc_equiv' (sigT (fun _ : IsMonoid L => forall a : G, Cancel L a))).
-issig (BuildIsCMonoid G L) (@cmonoid_is_monoid G L) (@cmonoid_cancel G L).
+issig (BuildIsCMonoid L) (@cmonoid_is_monoid G L) (@cmonoid_cancel G L).
 apply trunc_sigma.
 Defined.
 
@@ -169,7 +169,7 @@ Lemma isinverse_sig : forall {G} {L : Gop G} x y,
  sigT (fun _ : Linverse L x y => Rinverse L x y) <~> IsInverse L x y.
 Proof.
 intros.
-issig (BuildIsInverse G L x y) (@inverse_left G L x y) (@inverse_right G L x y).
+issig (BuildIsInverse L x y) (@inverse_left G L x y) (@inverse_right G L x y).
 Defined.
 
 Instance isinverse_prop : forall {G} {L : Gop G} {Hset : IsHSet G} x y,
@@ -193,7 +193,7 @@ apply funext_axiom. intro x. apply funext_axiom;intro y.
 apply univalence_axiom.
 eapply transitive_equiv;[|apply isinverse_sig].
 apply symmetric_equiv.
-issig (fun H H' => BuildIsInverse G L x y H' H)
+issig (fun H H' => BuildIsInverse L x y H' H)
  (@inverse_right G L x y) (@inverse_left G L x y).
 Defined.
 
@@ -236,7 +236,7 @@ Defined.
 
 Definition easyIsGroup {G} (L : Gop G) {Hg : IsMonoid L}
  (gopp : forall x : G, Inverse L x) := 
-BuildIsGroup G L (BuildIsCMonoid G L Hg
+BuildIsGroup L (BuildIsCMonoid L Hg
  (fun a => inverse_cancel a (gopp a))) gopp.
 
 Lemma inverse_unicity : forall {G} {L : Gop G} {Hassoc : Associative L},
@@ -250,7 +250,7 @@ Definition inverse_sig : forall {G} {L : Gop G} (x : G),
 sigT (IsInverse L x) <~> Inverse L x.
 Proof.
 intros.
-issig (BuildInverse G L x) (@inverse_val G L x) (@inverse_pr G L x).
+issig (BuildInverse L x) (@inverse_val G L x) (@inverse_pr G L x).
 Defined.
 
 Instance inverse_prop : forall {G} {L : Gop G} {Hset : IsHSet G}
@@ -341,7 +341,7 @@ Lemma gopp_cop_comm : forall {G} {L : Gop G} {Hg : IsGroup L}, forall x y : G,
  (goppV (gop x y)) = (gop (goppV x) (goppV y)).
 Proof.
 intros;path_via (gop (goppV y) (goppV x)).
-apply gopp_gop. apply commutative.
+apply gopp_gop. apply commutative. apply _.
 Defined.
 
 Instance gopp_prop : forall {G} {L : Gop G} {Hg : Associative L}
@@ -355,7 +355,7 @@ Definition isgroup_sig : forall {G} {L : Gop G},
 sigT (fun Hmon : IsCMonoid L => forall x : G, Inverse L x) <~> IsGroup L.
 Proof.
 intros.
-issig (BuildIsGroup G L) (@group_is_cmonoid G L) (@gopp G L).
+issig (BuildIsGroup L) (@group_is_cmonoid G L) (@gopp G L).
 Defined.
 
 Instance isgroup_prop : forall {G} {L : Gop G} {Hset : IsHSet G},
@@ -684,8 +684,9 @@ Proof.
 intros ? ? H H'.
 apply lt_iff_le_apart in H'.
 destruct H' as [H0 H1].
-apply irrefl_neq in H1. apply H1.
+apply @irrefl_neq in H1. apply H1.
 apply (@antisymmetric _ (<=));try assumption. apply Hpo.
+apply Hpo.
 Defined.
 
 Lemma lt_not_le_flip : forall (x y : T), x < y -> ~ y <= x.
@@ -693,7 +694,7 @@ Proof.
 intros ? ? H H'.
 apply lt_iff_le_apart in H.
 destruct H as [H0 H1].
-apply irrefl_neq in H1. apply H1.
+apply (@irrefl_neq _ _ Hpo) in H1. apply H1.
 apply (@antisymmetric _ (<=));try assumption. apply Hpo.
 Defined.
 
@@ -760,7 +761,6 @@ Defined.
 Global Instance fullpseudo_is_fullposet : FullPoset r.
 Proof.
 split;try apply _.
-apply pseudo_is_strict;apply _.
 
 intros x y. split.
 intro H. split. apply le_iff_not_lt_flip.
@@ -1268,7 +1268,7 @@ Instance distrib_prop : forall `{G : Prering T} {Hset : IsHSet T},
  IsHProp (Distributes G).
 Proof.
 intros. apply (@trunc_equiv' (sigT (fun _ : Ldistributes G => Rdistributes G))).
-issig (BuildDistributes _ G) (@distributes_left _ G) (@distributes_right _ G).
+issig (BuildDistributes G) (@distributes_left _ G) (@distributes_right _ G).
 apply @trunc_sigma;[|intro C;clear C];apply trunc_forall.
 Defined.
 
@@ -1279,7 +1279,7 @@ intros.
 apply (@trunc_equiv' (sigT (fun _ : IsCMonoid (prering_plus G) => 
   sigT (fun _ : IsMonoid (prering_mult G) => 
     Distributes G)))).
-issig (BuildIsSemiring _ G) (@semiring_plus _ G) (@semiring_mult _ G)
+issig (BuildIsSemiring G) (@semiring_plus _ G) (@semiring_mult _ G)
  (@semiring_distributes _ G).
 
 repeat (apply @trunc_sigma;[|intro C;clear C]);try apply _.
@@ -1295,7 +1295,7 @@ Proof.
 intros.
 apply semiring_cancel with (ZeroV ° x).
 path_via ((ZeroV + ZeroV) ° x).
-symmetry. apply semiring_distributes.
+symmetry. apply rdistributes. apply _.
 path_via (ZeroV ° x).
 apply (ap (fun g => g ° x)). apply Zero.
 apply inverse;apply Zero.
@@ -1307,7 +1307,7 @@ Proof.
 intros.
 apply semiring_cancel with (x ° ZeroV).
 path_via (x ° (ZeroV + ZeroV)).
-symmetry;apply semiring_distributes.
+symmetry;apply ldistributes;apply _.
 path_via (x ° ZeroV). apply ap;apply Zero.
 apply inverse;apply Zero.
 Defined.
@@ -1321,7 +1321,7 @@ red. apply transport with ZeroV;[|apply Zero].
 path_via (z ° (x + y)).
 path_via (z°ZeroV). apply inverse; apply rmult_0_r.
 apply ap. apply (id_unique (+)). apply Zero. apply H.
-apply semiring_distributes.
+apply ldistributes;apply _.
 Defined.
 
 Lemma rmult_inverse_left : forall `{G : Prering T} {Hg : IsSemiring G},
@@ -1330,7 +1330,7 @@ forall z,  IsInverse (+) (x°z) (y°z).
 Proof.
 intros ? ? ? ? ? H ?. apply linverse_inverse.
 red. apply transport with ZeroV;[|apply Zero]. symmetry; path_via ((x + y)°z).
-symmetry;apply semiring_distributes.
+symmetry;apply rdistributes;apply _.
 path_via (ZeroV°z). apply (ap (fun g => g°z)).
 apply (id_unique (prering_plus G));[apply H | apply Zero].
 apply rmult_0_l.
@@ -1354,7 +1354,7 @@ Definition isring_sig : forall `{G : Prering T},
  sigT (fun semir : IsSemiring G => forall x, Inverse (+) x)
   <~> IsRing G.
 Proof.
-intros. issig (BuildIsRing _ G) (@ring_is_semir _ G) (@r_opp _ G).
+intros. issig (BuildIsRing G) (@ring_is_semir _ G) (@r_opp _ G).
 Defined.
 
 Instance isring_prop : forall `{G : Prering T} {Hset : IsHSet T},
@@ -1386,7 +1386,7 @@ Defined.
 Lemma strictintegral_intdom : forall `(G : Prering T) {Hg : IsRing G}
  {Hr : IsStrictIntegral G}, neq ZeroV OneV -> IsIntegralDomain G.
 Proof.
-intros. apply (BuildIsIntegralDomain _ _ _).
+intros. apply (BuildIsIntegralDomain _ _).
 apply strictintegral_integral_pr.
 assumption.
 Defined.
@@ -1406,7 +1406,7 @@ eapply concat;[|symmetry;apply gidP].
 eapply concat;[|apply X].
 eapply concat;[ apply ap | apply (@gidP _ (+) _)].
 eapply concat. symmetry.
-apply semiring_distributes.
+apply semiring_distributes;apply _.
 eapply concat;[apply ap | apply rmult_0_r].
 apply (@id_unique _ (+) _);try apply _.
 apply roppP.
@@ -1427,7 +1427,7 @@ Lemma intdom_partial_cancels_right :forall `{G : Prering T} {Hg : IsRing G}
 Proof.
 intros ? ? ? ? ? ? ? ? ? X. apply intdom_partial_cancels_left with a;auto.
 eapply concat;[|eapply concat;[apply X|]];
-apply commutative.
+apply commutative;apply _.
 Defined.
 
 Lemma intdom_partial_cancels : forall  `{G : Prering T} {Hg : IsRing G}
@@ -1895,7 +1895,7 @@ Defined.
 Instance field_is_intdom : forall `{L : Prefield F} {Hf : IsField L},
  IsIntegralDomain (+ °).
 Proof.
-intros. apply (BuildIsIntegralDomain _ _ field_is_ring).
+intros. apply (BuildIsIntegralDomain _ field_is_ring).
 apply field_intdom_pr.
 red. eapply @irrefl_neq. apply Hf. apply field_neq.
 Defined.

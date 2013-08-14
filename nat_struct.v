@@ -95,11 +95,11 @@ split. intro;reflexivity.
 exact nplus_0_r.
 Defined.
 
-Canonical Structure nplus_identity : Identity nat_plus := BuildIdentity _ _ _ _.
+Canonical Structure nplus_identity : Identity nat_plus := BuildIdentity _ _ _.
 Existing Instance nplus_identity.
 
 Instance nat_plus_ismono : IsMonoid nat_plus
- := BuildIsMonoid _ _ _ nplus_identity.
+ := BuildIsMonoid _ _ nplus_identity.
 
 Instance nplus_left_cancel : forall n : nat, Lcancel nat_plus n.
 Proof.
@@ -126,7 +126,7 @@ Proof.
 intros. split;apply _.
 Defined.
 
-Instance nat_plus_cmono : IsCMonoid nat_plus := BuildIsCMonoid _ _ _ _.
+Instance nat_plus_cmono : IsCMonoid nat_plus := BuildIsCMonoid _ _ _.
 
 
 Fixpoint nmult (n m : nat) : nat := match n with
@@ -215,7 +215,7 @@ apply ap. apply IHx.
 Defined.
 
 
-Instance nmult_issg : IsSemigroup nat_mult := BuildIsSemigroup _ _ _ _.
+Instance nmult_issg : IsSemigroup nat_mult := BuildIsSemigroup _ _ _.
 
 Instance nmult_1_l : Left_id nat_mult 1.
 Proof.
@@ -233,10 +233,10 @@ Proof.
 split;apply _.
 Defined.
 
-Canonical Structure nmult_identity : Identity nat_mult := BuildIdentity _ _ _ _.
+Canonical Structure nmult_identity : Identity nat_mult := BuildIdentity _ _ _.
 Existing Instance nmult_identity.
 
-Instance nmult_ismono : IsMonoid nat_mult := BuildIsMonoid _ _ _ nmult_identity.
+Instance nmult_ismono : IsMonoid nat_mult := BuildIsMonoid _ _ nmult_identity.
 
 Global Instance nat_issemiring : IsSemiring nat_prering.
 Proof.
@@ -604,7 +604,7 @@ induction x.
   unfold gop.
   apply (@ap _ _ (fun g => g + (nat_embed x ° nat_embed y)) (nat_embed y)).
   apply inverse. apply One.
-  apply inverse. apply rdistributes.
+  apply inverse. apply rdistributes;apply _.
 Defined.
 
 End nat_to_semiring.
