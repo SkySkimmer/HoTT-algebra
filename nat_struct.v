@@ -2,15 +2,20 @@ Require Import HoTT.
 Require Import structures basics.
 
 Export Ring_pr Relation_pr OrderedMagma_pr.
+Import minus1Trunc.
 
 Open Scope nat_scope.
 
-Section InstanceScope.
+(* used to avoid polluting with extra instances
+eg left_cancel, right_cancel and cancel when just cancel suffices *)
+Section LocalInstances.
 
 Fixpoint nplus (n m : nat) : nat := match n with
   | S k => S (nplus k m)
   | 0 => m
   end.
+
+Global Instance nat_plus : Plus nat := nplus.
 
 Definition npred (n : nat) : nat := match n with
   | S k => k
@@ -46,8 +51,6 @@ Proof.
 apply hset_decidable. exact eq_nat_dec.
 Defined.
 
-Canonical Structure nat_add : PlusMagma := BuildMagma nat nplus.
-
 Lemma nplus_0_l : forall n, 0 + n = n.
 Proof.
 reflexivity.
@@ -71,38 +74,34 @@ induction n;intros. reflexivity.
 apply (ap S). apply IHn.
 Defined.
 
-Instance nplus_comm : Commutative nat_add.
+Instance nplus_comm : Commutative nat_plus.
 Proof.
 red. induction y. apply nplus_0_r.
 unfold gop;simpl. eapply concat;[| apply ap; apply IHy].
 apply nplus_S_r.
 Defined.
 
-Instance nplus_assoc : Associative nat_add.
+Instance nplus_assoc : Associative nat_plus.
 Proof.
 red. induction x. intros;reflexivity.
 intros;unfold gop;simpl. apply ap;apply IHx.
 Defined.
 
-Instance nat_add_issg : IsSemigroup nat_add := BuildIsSemigroup _ _ _.
+Instance nplus_is_sg : IsSemigroup nat_plus. split;apply _. Defined.
 
-Canonical Structure nat_add_sg : semigroup :=
- BuildSemigroup nat_add _.
-
-Instance n0_is_id : IsId 0.
+Instance n0_is_id : IsId nat_plus 0.
 Proof.
 split. intro;reflexivity.
 exact nplus_0_r.
 Defined.
 
-Canonical Structure nplus_identity : Identity nat_add := BuildIdentity _ _ _.
+Canonical Structure nplus_identity : Identity nat_plus := BuildIdentity _ _ _ _.
+Existing Instance nplus_identity.
 
-Instance nat_add_ismono : IsMonoid nat_add := BuildIsMonoid _ _ nplus_identity.
+Instance nat_plus_ismono : IsMonoid nat_plus
+ := BuildIsMonoid _ _ _ nplus_identity.
 
-Canonical Structure nat_add_monoid : monoid := 
- BuildMonoid nat_add _.
-
-Instance nplus_left_cancel : forall n : nat, Lcancel n.
+Instance nplus_left_cancel : forall n : nat, Lcancel nat_plus n.
 Proof.
 induction n;red;intros.
 assumption.
@@ -110,7 +109,7 @@ unfold gop in H;simpl in H. apply IHn.
 apply (ap npred H).
 Defined.
 
-Instance nplus_right_cancel : forall n : nat, Rcancel n.
+Instance nplus_right_cancel : forall n : nat, Rcancel nat_plus n.
 Proof.
 induction n;red;intros.
 eapply concat;[|eapply concat;[apply H|]].
@@ -122,25 +121,24 @@ apply nplus_S_r.
 apply (ap npred X).
 Defined.
 
-Instance nplus_cancel : forall n : nat, Cancel n.
+Instance nplus_cancel : forall n : nat, Cancel nat_plus n.
 Proof.
 intros. split;apply _.
 Defined.
 
-Instance nat_add_cmono : IsCMonoid nat_add := BuildIsCMonoid _ _ _.
+Instance nat_plus_cmono : IsCMonoid nat_plus := BuildIsCMonoid _ _ _ _.
 
-Canonical Structure nat_cmonoid : Cmonoid := 
- BuildCMonoid nat_add _.
 
 Fixpoint nmult (n m : nat) : nat := match n with
   | S k => m + (nmult k m)
   | 0 => 0
   end.
 
-Canonical Structure nat_mult : MultMagma := BuildMagma nat nmult.
+Global Instance nat_mult : Mult nat := nmult.
 
-Canonical Structure nat_prering : prering :=
- BuildLL_sig nat (BuildLL_Class _ nplus nmult).
+Global Instance nat_prering : Prering nat :=
+ (BuildLL_Class _ nat_plus nat_mult).
+Canonical Structure nat_prering.
 
 Definition nmult_0_l : forall m, 0 ° m = 0 := fun _ => idpath.
 
@@ -183,12 +181,11 @@ reflexivity.
 
 eapply concat;[apply nmult_S_l|].
 pattern (a ° (b+c)). eapply transport. symmetry;apply IHa.
-transitivity (b + (c + (a°b + a°c))).
-eapply concat;[ apply nplus_assoc |].
-eapply concat;[| symmetry;apply nplus_assoc].
-symmetry;apply nplus_assoc.
+path_via (b + (c + (a°b + a°c))).
+eapply concat;[ symmetry;apply nplus_assoc |]. apply ap;apply ap.
+apply IHa.
 
-eapply concat;[| apply nplus_assoc]. apply ap.
+eapply concat;[| apply nplus_assoc]. fold nmult. apply ap.
 eapply concat;[| apply nplus_comm].
 eapply concat;[| apply nplus_assoc]. apply ap.
 apply nplus_comm.
@@ -218,38 +215,33 @@ apply ap. apply IHx.
 Defined.
 
 
-Instance nmult_issg : IsSemigroup nat_mult := BuildIsSemigroup _ _ _.
+Instance nmult_issg : IsSemigroup nat_mult := BuildIsSemigroup _ _ _ _.
 
-Canonical Structure nat_mult_sg : semigroup := BuildSemigroup nat_mult _.
-
-Instance nmult_1_l : @Left_id nat_mult 1.
+Instance nmult_1_l : Left_id nat_mult 1.
 Proof.
 red. simpl. apply nplus_0_r.
 Defined.
 
-Instance nmult_1_r : @Right_id nat_mult 1.
+Instance nmult_1_r : Right_id nat_mult 1.
 Proof.
 red. intros. eapply concat. apply nmult_comm.
 apply nmult_1_l.
 Defined.
 
-Instance nmult_1_id : @IsId nat_mult 1.
+Instance nmult_1_id : IsId nat_mult 1.
 Proof.
 split;apply _.
 Defined.
 
-Canonical Structure nmult_identity : Identity nat_mult := BuildIdentity _ _ _.
+Canonical Structure nmult_identity : Identity nat_mult := BuildIdentity _ _ _ _.
+Existing Instance nmult_identity.
 
-Instance nmult_ismono : IsMonoid nat_mult := BuildIsMonoid _ _ nmult_identity.
-
-Canonical Structure nat_mult_mono : monoid := BuildMonoid nat_mult _.
+Instance nmult_ismono : IsMonoid nat_mult := BuildIsMonoid _ _ _ nmult_identity.
 
 Global Instance nat_issemiring : IsSemiring nat_prering.
 Proof.
 apply BuildIsSemiring;apply _.
 Defined.
-
-Canonical Structure nat_semiring : semiring := BuildSemiring nat_prering _.
 
 Lemma nplus_0_0_back : forall n m, n + m = 0 -> (n = 0) * (m = 0).
 Proof.
@@ -274,15 +266,20 @@ intros.
 compute in H. apply nplus_0_0_back in H. apply H.
 Defined.
 
-Lemma nmult_integral : forall n m, mult n m = 0 -> 
-(n = 0) + (m = 0).
+Lemma nmult_integral : forall n m, 0 = mult n m ->
+(0 = n) + (0 = m).
 Proof.
-intros. destruct n. 
+intros n m;intros. destruct n. 
 - left;reflexivity.
-- right;eapply nmult_S_0_back. apply H.
+- right;symmetry;eapply nmult_S_0_back. symmetry;apply H.
 Defined.
 
-Instance nmult_left_cancel : forall n, @Lcancel (prering_mult _) (S n).
+Instance nmult_strict_integral : IsStrictIntegral nat_prering.
+Proof.
+red;intros;apply min1;apply nmult_integral;assumption.
+Defined.
+
+Instance nmult_left_cancel : forall n, Lcancel nat_mult (S n).
 Proof.
 intros n m;induction m;simpl in *;intros m' H.
 assert (X:m' + (n°m') = 0). eapply concat. symmetry;apply H.
@@ -290,18 +287,23 @@ apply nmult_0_r.
 apply nplus_0_0_back in X. symmetry;apply X.
 
 destruct m'.
-assert (X:(S n) ° (S m) = 0). eapply concat. apply H. apply nmult_0_r.
-apply nmult_integral in X.
-destruct X as [X | X];apply S_0_neq in X;destruct X.
+assert (X:(S n) ° (S m)=0). eapply concat. apply H. apply nmult_0_r.
+apply inverse in X;apply nmult_integral in X.
+destruct X as [X | X];apply inverse in X;apply S_0_neq in X;destruct X.
 
-apply ap. apply IHm.
-apply nplus_right_cancel with (S n).
-simpl.
+apply ap. apply IHm. change gop with mult in *.
+apply nplus_right_cancel with (S n). change gop with plus.
 eapply concat;[|eapply concat;[apply H|]].
-symmetry. apply nmult_S_r. apply nmult_S_r.
+unfold mult;simpl. change nat_mult with mult.
+symmetry. eapply concat. apply ap. apply nmult_S_r.
+symmetry;eapply concat. apply nplus_S_r. apply (ap S). fold nplus.
+symmetry;apply (@associative _ nat_plus _).
+eapply concat. unfold mult;simpl;apply ap;apply nmult_S_r.
+eapply concat;[|symmetry;apply nplus_S_r]. apply (ap S).
+fold nplus. apply (@associative _ nat_plus _).
 Defined.
 
-Global Instance nmult_cancel : forall n, @Cancel (prering_mult _) (S n).
+Global Instance nmult_cancel : forall n, Cancel (nat_mult) (S n).
 Proof.
 intro;apply left_cancel_cancel. apply _.
 Defined.
@@ -312,15 +314,10 @@ Inductive nle (n : nat) : nat -> Type :=
 
 Definition nlt n := nle (S n).
 
-Canonical Structure nat_RRR : RRR_sig := makeRRR_sig nat neq nle nlt.
+Canonical Structure nat_RRR : FullRelation nat := BuildRRR_Class nat neq nle nlt.
+Global Existing Instance nat_RRR.
 
-Definition nLeq := RRR_to_R2 nat_RRR.
-Definition nLt := RRR_to_R3 nat_RRR.
-
-Canonical Structure nat_LLRRR : LLRRR_sig
- := makeLLRRR_sig nat nplus nmult neq nle nlt.
-
-Instance le_refl : IsReflexive nLeq := nle_n.
+Instance le_refl : Reflexive (<=) := nle_n.
 
 Lemma le_exists : forall n m : nat, n <= m -> exists k, k + n = m.
 Proof.
@@ -357,7 +354,7 @@ rewrite IHk.
 simpl. reflexivity.
 Defined.
 
-Instance le_antisymm : IsAntisymmetric nLeq.
+Instance le_antisymm : Antisymmetric (<=).
 Proof.
 intros n m H H0.
 apply le_exists in H. apply le_exists in H0.
@@ -369,7 +366,6 @@ assert (H : S (k + S (k' + m)) = m).
 pattern (S (k' + m)). eapply transport. symmetry;apply Hk'. apply Hk.
 assert (H' : (S (S (k+ k'))) + m = 0 + m).
 simpl. eapply concat;[|apply H].
-unfold rplus;unfold gop;simpl.
 apply (ap S). symmetry. eapply concat;[apply nplus_S_r|]. apply ap.
 apply nplus_assoc.
 apply nplus_right_cancel in H'.
@@ -473,7 +469,7 @@ assert (X : S (k + n) = S m). path_via (k + S n). symmetry. apply nplus_S_r.
 apply (ap npred X).
 Defined.
 
-Instance le_trans : IsTransitive nLeq.
+Instance le_trans : Transitive (<=).
 Proof.
 intros x y z H;revert z;induction H;intros. assumption.
 destruct z.
@@ -515,21 +511,21 @@ destruct (le_lt_dec m n). apply Empty_rect;auto.
 assumption.
 Defined.
 
-Instance le_dec : IsDecidable nLeq.
+Instance le_dec : Decidable (<=).
 Proof.
 intros n m;destruct (le_lt_dec n m).
 left;assumption.
 right;apply lt_not_le;assumption.
 Defined.
 
-Instance le_linear : IsConstrLinear nLeq.
+Instance le_linear : ConstrLinear (<=).
 Proof.
 intros n m. destruct (le_lt_dec n m). left;assumption.
 right. apply le_trans with (S m). apply nle_S;apply nle_n.
 assumption.
 Defined.
 
-Global Instance le_total_order : IsConstrTotalOrder nLeq.
+Global Instance le_total_order : ConstrTotalOrder (<=).
 Proof.
 constructor;[constructor|];apply _.
 Defined.
@@ -558,7 +554,7 @@ Proof.
 intros;split;intros H.
 destruct H. right;reflexivity.
 left. apply le_S_S. assumption.
-destruct H. apply istrans with (S n). apply nle_S. apply nle_n.
+destruct H. apply transitivity with (S n). apply nle_S. apply nle_n.
 assumption.
 destruct p;apply nle_n.
 Defined.
@@ -572,48 +568,43 @@ destruct H;assumption.
 Defined.
 
 
-
-
-
-
-
-End InstanceScope.
+End LocalInstances.
 
 Section nat_to_semiring.
 
-Variable (G : semiring).
+Context {A:Type}.
+Variable (L : Prering A).
+Context {Hg : IsSemiring L}.
 
-Fixpoint nat_embed (n : nat) : prering_plus G := match n with
-  | S k => @OneV G + (nat_embed k)
+Fixpoint nat_embed (n : nat) : A := match n with
+  | S k => OneV + (nat_embed k)
   | 0 => ZeroV
   end.
 
-Instance nat_embed_add_morph : Magma.IsMorphism nat_embed.
+Global Instance nat_embed_add_morph : Magma.IsMorphism (+) (+) nat_embed.
 Proof.
-red. simpl. fold (@rplus G).
+red.
 induction x;intros.
 - symmetry. apply Zero.
 - simpl. eapply concat.
   apply ap. apply IHx.
-  apply (@associative (prering_plus G) _).
+  apply (@associative _ (+) _).
 Defined.
 
-Instance nat_embed_mult_morph : @Magma.IsMorphism nat_mult (prering_mult G)
- nat_embed.
+Global Instance nat_embed_mult_morph : Magma.IsMorphism (°) (°) nat_embed.
 Proof.
-red. simpl. fold (@rmult G).
-unfold gop. simpl.
+red.
 induction x.
 - intros. simpl.
   apply inverse. apply rmult_0_l.
-- intros. simpl.
+- intros. unfold gop. simpl.
   eapply concat. apply nat_embed_add_morph.
-  fold (@rplus G).
   eapply concat. apply ap. apply IHx.
   path_via ((OneV ° nat_embed y) + nat_embed x ° nat_embed y).
-  apply (ap (fun g => g + _)).
+  unfold gop.
+  apply (@ap _ _ (fun g => g + (nat_embed x ° nat_embed y)) (nat_embed y)).
   apply inverse. apply One.
-  apply inverse. apply right_distributes.
+  apply inverse. apply rdistributes.
 Defined.
 
 End nat_to_semiring.
