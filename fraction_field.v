@@ -482,7 +482,7 @@ destruct (Hdec ZeroV xa).
   apply _.
 Defined.
 
-Instance frac_isdecfield : IsDecField fracPrering.
+Global Instance frac_isdecfield : IsDecField fracPrering.
 Proof.
 apply BuildIsDecField with frac_isring fracInv.
 apply frac_neq.
