@@ -461,28 +461,31 @@ intros. destruct x,y.
 apply ap;assumption.
 Defined.
 
-Lemma some_injective : forall {B} {x y : B}, Some x = Some y -> x=y.
-Proof.
-intros ? ? ? H.
-apply (ap (fun s => match s with | Some z => z | _ => x end) H).
-Defined.
-
 Context {Hsg : IsSemigroup G}.
 
-Lemma ast_use : forall {i j : ctx} {t1 t2 : T nat}
- (f1 : ast [] i t1) (f2 : ast i j t2), 
-  evalNE (onth j) (sort nat_order_dec (T2list t1)) =
-  evalNE (onth j) (sort nat_order_dec (T2list t2)) ->
-  untag (val f1) = untag (val f2).
+Definition someRel {T T' : Type} (R : T -> T' -> Type)
+ : option T -> option T' -> Type := fun x y => match x,y with
+    | Some a, Some b => R a b
+    | _, _ => Empty
+    end.
+
+Lemma some_injective : forall {T T' : Type} (R : T -> T' -> Type)
+ x y, someRel R (Some x) (Some y) -> R x y.
 Proof.
-intros ? ? ? ? ? ? H.
+intros ? ? ? ? ? H.
+apply H.
+Defined.
+
+Lemma ast_use : forall (R : relation A) {i j : ctx} {t1 t2 : T nat}
+ (f1 : ast [] i t1) (f2 : ast i j t2), 
+  someRel R (evalNE (onth j) (sort nat_order_dec (T2list t1)))
+            (evalNE (onth j) (sort nat_order_dec (T2list t2))) ->
+  R (untag (val f1)) (untag (val f2)).
+Proof.
+intros ? ? ? ? ? ? ? H.
 apply some_injective.
-eapply concat;
-[ | eapply concat;[|apply ast_pr]].
-symmetry. eapply prefix_eval. apply f2. apply f1.
-eapply concat;[eapply concat;[|apply H]|].
-symmetry. apply sort_full.
-apply sort_full.
+pattern (Some (untag (val f1)));eapply transport;[|eapply transport;[|apply H]];
+(eapply concat;[apply sort_full|]);[eapply prefix_eval;[apply f2|apply f1]|apply f2].
 Defined.
 
 End Ast.
@@ -755,60 +758,60 @@ Canonical Structure ast2_mult (i j k : ctx) (t1 t2 : T2)
 Canonical Structure ast2_var (i j : ctx) (n : nat) (f : xfind _ i j n) :=
   Ast2 i j (Val2 n) (var_tag (xuntag _ (elem_of _ _ _ _ f))) f f. 
 
-Lemma ast2_semiring : forall {Hsemir : IsSemiring G}, 
-forall {i j : ctx} {t1 t2 : T2}
+Section Minimal.
+
+Context {Hadd : @IsSemigroup A (+)} {Hmult : @IsSemigroup A (°)}
+ {Hdistrib : Distributes G}.
+
+Lemma ast2_use : forall R {i j : ctx} {t1 t2 : T2}
  (f1 : ast2 [] i t1) (f2 : ast2 i j t2), 
-  evalFlat2 (onth j) (Flat2_order_in (flatten t1)) =
-  evalFlat2 (onth j) (Flat2_order_in (flatten t2)) ->
-  untag (val2 f1) = untag (val2 f2).
+  someRel R (evalFlat2 (onth j) (Flat2_order_in (flatten t1)))
+            (evalFlat2 (onth j) (Flat2_order_in (flatten t2))) ->
+  R (untag (val2 f1)) (untag (val2 f2)).
 Proof.
 intros ? ? ? ? ? ? ? H.
 apply some_injective.
-eapply concat;
-[ | eapply concat;[|apply ast2_pr]].
-symmetry. eapply prefix_eval2. apply f2. apply f1.
-eapply concat;[eapply concat;[|apply H]|].
-symmetry. eapply concat. apply @order_in_ok. apply Hsemir.
-apply @flatten_ok;apply Hsemir.
-eapply concat. apply @order_in_ok;apply Hsemir. apply @flatten_ok;apply Hsemir.
+pattern (Some (untag (val2 f1)));eapply transport;[|eapply transport;[|apply H]];
+(eapply concat;[ apply order_in_ok|
+eapply concat;[ apply flatten_ok|]]).
+eapply prefix_eval2. apply f2. apply f1.
+apply f2.
+Defined.
+
+End Minimal.
+
+Lemma ast2_semiring : forall {Hsemir : IsSemiring G},
+forall R {i j : ctx} {t1 t2 : T2}
+ (f1 : ast2 [] i t1) (f2 : ast2 i j t2), 
+  someRel R (evalFlat2 (onth j) (Flat2_order_in (flatten t1)))
+            (evalFlat2 (onth j) (Flat2_order_in (flatten t2))) ->
+  R (untag (val2 f1)) (untag (val2 f2)).
+Proof.
+intro.
+apply @ast2_use;apply _.
 Defined.
 
 Definition full_simplify (t : T2) := 
   sort NEList_nat_order_dec (T2list (Flat2_order_in (flatten t))).
 
 Lemma ast2_full_semiring : forall {Hsemir : IsSemiring G},
-forall {i j : ctx} {t1 t2 : T2}
+forall R {i j : ctx} {t1 t2 : T2}
  (f1 : ast2 [] i t1) (f2 : ast2 i j t2), 
-  @evalNE A (+) _ (fun l => @evalNE A (°) _ (onth j) l)
-     (full_simplify t1) =
-  @evalNE A (+) _ (fun l => @evalNE A (°) _ (onth j) l)
-     (full_simplify t2)
-  -> untag (val2 f1) = untag (val2 f2).
+  someRel R (@evalNE A (+) _ (fun l => @evalNE A (°) _ (onth j) l)
+               (full_simplify t1))
+            (@evalNE A (+) _ (fun l => @evalNE A (°) _ (onth j) l)
+               (full_simplify t2))
+  -> R (untag (val2 f1)) (untag (val2 f2)).
 Proof.
-intros ? ? ? ? ? ? ? H.
-apply ast2_semiring.
-unfold evalFlat2. assert (@IsSemigroup A (°));[apply Hsemir|].
-apply (@sort_inj A (°) _ _ NEList_nat_order_dec);clear X.
-exact H.
-Defined.
-
-Context {Hadd : @IsSemigroup A (+)} {Hmult : @IsSemigroup A (°)}
- {Hdistrib : Distributes G}.
-
-Lemma ast2_use : forall {i j : ctx} {t1 t2 : T2}
- (f1 : ast2 [] i t1) (f2 : ast2 i j t2), 
-  evalFlat2 (onth j) (Flat2_order_in (flatten t1)) =
-  evalFlat2 (onth j) (Flat2_order_in (flatten t2)) ->
-  untag (val2 f1) = untag (val2 f2).
-Proof.
-intros ? ? ? ? ? ? H.
-apply some_injective.
-eapply concat;
-[ | eapply concat;[|apply ast2_pr]].
-symmetry. eapply prefix_eval2. apply f2. apply f1.
-eapply concat;[eapply concat;[|apply H]|].
-symmetry. eapply concat. apply order_in_ok. apply flatten_ok.
-eapply concat. apply order_in_ok. apply flatten_ok.
+intros ? ? ? ? ? ? ? ? H.
+apply (ast2_semiring R).
+unfold evalFlat2.
+eapply transport;[|pattern (@evalTree A (@plus A G) (NEList nat)
+     (fun l : NEList nat => @evalNE A (@mult A G) nat (onth j) l)
+     (Flat2_order_in (flatten t1))); eapply transport;[|apply H]];
+(unfold full_simplify;
+eapply concat;[ apply sort_correct; apply _|
+apply T2list_correct]).
 Defined.
 
 End Ast2.
@@ -817,7 +820,9 @@ Lemma test2 : forall A (G : Prering A) {Hsemir : IsSemiring G},
 forall a b c : A, a°(b+c) = a°c + a°b.
 Proof.
 intros.
-ssrapply (@ast2_full_semiring A (+ °) Hsemir).
+ssrapply (@ast2_full_semiring A (+ °) Hsemir paths).
+reflexivity.
+Fail idtac.
 Abort.
 
 End Distributive.
