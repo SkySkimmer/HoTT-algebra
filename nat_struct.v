@@ -314,8 +314,9 @@ Inductive nle (n : nat) : nat -> Type :=
 
 Definition nlt n := nle (S n).
 
-Canonical Structure nat_RRR : FullRelation nat := BuildRRR_Class nat neq nle nlt.
-Global Existing Instance nat_RRR.
+Canonical Structure nat_LLRRR : PreringFull nat
+ := BuildLLRRR_Class nat nplus nmult neq nle nlt.
+Global Existing Instance nat_LLRRR.
 
 Instance le_refl : Reflexive (<=) := nle_n.
 
@@ -565,6 +566,51 @@ intros;split;intro H.
 intro H'. eapply lt_not_le;[apply H'|apply H].
 destruct (le_lt_dec n m). assumption.
 destruct H;assumption.
+Defined.
+
+Instance nle_plus_linvariant : IsLInvariant (+ <=).
+Proof.
+red;red. unfold gop;unfold rrel. simpl.
+simpl.
+intros. apply exists_le. apply le_exists in H.
+destruct H as [k []]. exists k.
+path_via ((k+z)+x). apply associative;apply _.
+path_via ((z+k)+x). apply (ap (fun g => g + _)). apply commutative;apply _.
+symmetry;apply associative;apply _.
+Defined.
+
+Global Instance nplus_nle_invariant : IsInvariant (+ <=).
+Proof.
+apply linvariant_invariant; apply _.
+Defined.
+
+Global Instance nplus_nle_compat : IsCompat (+ <=).
+Proof.
+apply invariant_compat; apply _.
+Defined.
+
+Global Instance nplus_nle_regular : forall z, IsRegular (+ <=) z.
+Proof.
+assert (forall z, IsLRegular (+ <=) z). red;red.
+unfold rrel;unfold gop;simpl.
+intros ? ? ? H.
+apply le_exists in H;apply exists_le.
+destruct H as [k H].
+exists k. apply nplus_cancel with z.
+path_via (k + (z+x)).
+path_via ((z+k)+x). apply associative;apply _.
+path_via ((k+z)+x). apply (ap (fun g => g + _)). apply commutative;apply _.
+symmetry;apply associative;apply _.
+
+intros;split. apply _.
+red;red.
+intros. apply H with z.
+unfold gop;simpl.
+apply (@transport _ (fun k => k ~> z+y) (x+z)).
+apply commutative;apply _.
+apply (@transport _ (fun k => _ ~> k) (y+z)).
+apply commutative;apply _.
+assumption.
 Defined.
 
 

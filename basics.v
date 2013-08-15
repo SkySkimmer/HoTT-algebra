@@ -507,6 +507,17 @@ Proof.
 red;intros;apply min1;auto.
 Defined.
 
+Lemma dec_linear_constrlinear : forall `(r : Leq T) {Hdec : Decidable r}
+ {Hlin : Linear r}, ConstrLinear r.
+Proof.
+red;intros.
+destruct (Hdec x y). left;assumption.
+destruct (Hdec y x). right;assumption.
+apply Empty_rect. pose (H := Hlin x y). clearbody H;revert H.
+apply minus1Trunc_rect_nondep;[|intros []].
+intros [H|H];auto.
+Defined.
+
 Instance constrtotal_total : forall `{r : Leq T},
  ConstrTotalOrder r -> TotalOrder r.
 Proof.
@@ -1160,6 +1171,16 @@ End Relation_pr.
 Module OrderedMagma_pr.
 Export OrderedMagma Magma_pr Relation_pr.
 Generalizable Variable T.
+
+Lemma linvariant_invariant : forall `(G : OpRel T) {Hcomm : Commutative G},
+IsLInvariant G -> IsInvariant G.
+Proof.
+intros;split. assumption.
+red;red. intros ? ? ?.
+pattern (x&z). apply transport with (z&x). apply Hcomm.
+pattern (y&z);apply transport with (z&y). apply Hcomm.
+apply X.
+Defined.
 
 Lemma invariant_compat : forall `(G : OpRel T) {Htrans : Transitive (~>)},
  IsInvariant G -> IsCompat G.

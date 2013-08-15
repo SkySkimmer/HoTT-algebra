@@ -25,10 +25,51 @@ Module Relative.
 Import GroupOfCMono.
 
 Definition Z := @quotU nat (+).
-Instance ZPrering : Prering Z := quotPrering _.
-Instance ZRing : IsRing ZPrering := quot_ring _.
+Instance ZPrering : PreringFull Z.
+Proof.
+split.
+apply (@quotOp nat plus _).
+apply (LL_L2 _ (quotPrering nat_prering)).
+apply (@quotRel nat (nat_LLRRR:(PlusApart nat))).
+apply (@quotRel nat (nat_LLRRR:(PlusLeq nat))).
+apply (@quotRel nat (nat_LLRRR:(PlusLt nat))).
+Defined.
 
-Definition z_class : nat*nat -> Z := quotIn (+).
+Instance ZRing : IsRing ZPrering.
+Proof.
+unfold ZPrering.
+change (IsRing (quotPrering nat_prering)).
+apply _.
+Defined.
+
+Instance zLeq_prop : @RelationProp Z (<=).
+Proof.
+red;apply _.
+Defined.
+
+Instance zLeq_dec : @Decidable Z (<=).
+Proof.
+unfold ZPrering. unfold leq. simpl.
+apply (@quotrel_dec _ (nat_LLRRR:(PlusLeq nat)));try apply _;simpl.
+exact le_prop.
+apply nplus_nle_invariant.
+apply nplus_nle_regular.
+apply le_dec.
+Defined.
+
+Instance zLeq_total_order : @ConstrTotalOrder Z (<=).
+Proof.
+split.
+apply (@quotrel_poset _ (nat_LLRRR:PlusLeq nat));try apply _.
+exact le_prop. apply nplus_nle_invariant.
+apply nplus_nle_regular.
+apply le_total_order.
+apply dec_linear_constrlinear. apply _.
+apply (@quotrel_linear _ (nat_LLRRR:PlusLeq nat)).
+apply constrlinear_linear. apply le_total_order.
+Defined.
+
+Definition zIn : nat*nat -> Z := quotIn (+).
 
 Definition zEquiv : Rel (nat*nat) := equivU (+).
 
@@ -40,7 +81,7 @@ red;apply _.
 Defined.
 
 Definition z_rect : forall (P : Z -> Type) 
-(dclass : forall m n, P (z_class (m, n))),
+(dclass : forall m n, P (zIn (m, n))),
 (forall a b a' b' (Hequiv : zEquiv (a,b) (a',b')),
  transport _ (@related_classes_eq _ zEquiv _ _ Hequiv) (dclass a b)
    = (dclass a' b')) ->
@@ -55,8 +96,8 @@ apply H.
 Defined.
 
 Definition z_ind : forall (P : Z -> Type), 
-(forall a b, IsHProp (P (z_class (a, b)))) -> 
-(forall a b, P (z_class (a, b))) ->
+(forall a b, IsHProp (P (zIn (a, b)))) -> 
+(forall a b, P (zIn (a, b))) ->
 forall z, P z.
 Proof.
 intros P Hp Hd. apply quotU_ind.
@@ -66,7 +107,7 @@ simpl. intros [a b];apply Hd.
 Defined.
 
 Definition z_ind_contr : forall (P : Z -> Type),
-(forall a b, Contr (P (z_class (a, b)))) ->
+(forall a b, Contr (P (zIn (a, b)))) ->
 forall z, Contr (P z).
 Proof.
 intros P Hd. apply quotU_rect with
@@ -77,14 +118,14 @@ apply hprop_contr.
 Defined.
 
 Lemma z_rect_compute : forall (P : Z -> Type)
-(dclass : forall m n, P (z_class (m, n))) H a b,
- z_rect P dclass H (z_class (a, b)) = dclass a b.
+(dclass : forall m n, P (zIn (m, n))) H a b,
+ z_rect P dclass H (zIn (a, b)) = dclass a b.
 Proof.
 intros. reflexivity.
 Defined.
 
 Section NotaSec.
-Notation "[ a , b ]" := (z_class (a, b)).
+Notation "[ a , b ]" := (zIn (a, b)).
 
 Lemma zEquiv_eval : forall a b c d, zEquiv (a,b) (c,d) = (a+d = c+b).
 Proof.
@@ -105,7 +146,7 @@ Defined.
 
 Definition zOpp : forall x : Z, Inverse (+) x := ropp.
 Definition zOppV : Z -> Z := fun x => inverse_val (zOpp x).
-Instance zOppP : forall x : Z, IsInverse (+) x (zOppV x) := _.
+Global Instance zOppP : forall x : Z, IsInverse (+) x (zOppV x) := _.
 
 Definition zero_class : ZeroV = [0,0] := idpath.
 Definition one_class : OneV = [1%nat,0] := idpath.
@@ -121,7 +162,7 @@ Proof.
 intros ? ? ? ?. apply related_classes_eq.
 Defined.
 
-Lemma z_classes_eq_related : forall a b, z_class a = z_class b -> 
+Lemma z_classes_eq_related : forall a b, zIn a = zIn b -> 
 zEquiv a b.
 Proof.
 apply classes_eq_related.
@@ -139,10 +180,10 @@ Defined.
 Definition zEmbed_eval : forall n, zEmbed n = [n,0] := fun _ => idpath.
 
 Definition zCanon (z : Z) (x : nat*nat) :=
- (z = z_class x) * minus1Trunc (fst x = 0 \/ snd x = 0).
+ (z = zIn x) * minus1Trunc (fst x = 0 \/ snd x = 0).
 
 Definition is_zCanon : forall x, (fst x = 0 \/ snd x = 0) ->
- zCanon (z_class x) x := fun x H => (idpath , min1 H).
+ zCanon (zIn x) x := fun x H => (idpath , min1 H).
 
 Definition zCanon_or : forall z x, zCanon z x -> (fst x = 0 \/ snd x = 0).
 Proof.
@@ -226,6 +267,54 @@ destruct (prod_eq_dec _ eq_nat_dec _ eq_nat_dec rx ry).
   path_via (quotIn (+) ry). apply ap;assumption.
   symmetry;apply Hy.
 - right. intro Hn. destruct Hn. apply n. eapply zCanon_atmost;eauto.
+Defined.
+
+Lemma zApart_repr : forall x y, zIn x <> zIn y ->
+ quotRelU (BuildLR_Class nat plus neq) x y.
+Proof.
+apply quotRel_repr;try apply _.
+red;red. unfold rrel;unfold gop;simpl.
+intros ? ? ? H H'.
+apply H. apply nplus_cancel with z. assumption.
+red;red. unfold rrel;unfold gop;simpl.
+intros z x y H H'. apply H. destruct H'. reflexivity.
+Defined.
+
+Global Instance zApart_prop : @RelationProp Z (<>).
+Proof.
+red;apply _.
+Defined.
+
+Global Instance zTrivialApart : @TrivialApart Z (<>).
+Proof.
+red.
+assert (forall x y : Z, x<>y -> x!=y).
+apply (z_ind (fun x => forall y, _ -> _) _).
+intros a b. apply (z_ind (fun y => _->_) _).
+intros c d.
+intros H.
+red in H;simpl in H. apply zApart_repr in H.
+simpl in H. unfold gop in H.
+intro H'.
+apply z_classes_eq_related in H'. red in H';red in H';simpl in H'.
+auto.
+
+assert (forall x y : Z, x!=y -> x<>y).
+apply (z_ind (fun x => forall y, _ -> _) _).
+intros a b;apply (z_ind (fun y => _ -> _) _).
+intros c d.
+intros H.
+apply repr_quotRel. simpl.
+unfold gop;simpl;intro H'.
+apply H. apply related_classes_eq. assumption.
+
+intros;split;auto.
+Defined.
+
+Global Instance zApart_apart : @Apartness Z apart.
+Proof.
+apply neq_apart. apply eq_z_dec.
+apply zTrivialApart.
 Defined.
 
 

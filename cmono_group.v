@@ -686,6 +686,8 @@ left. apply repr_quotRel. assumption.
 right. intro H. apply quotRel_repr in H. apply n;assumption.
 Defined.
 
+End WithRel.
+
 End GroupOfCMono.
 
 

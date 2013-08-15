@@ -95,7 +95,14 @@ Instance leqlt_lt  : forall {T}, LeqLt T -> Lt T := RR_R2.
 Coercion leqlt_leq : LeqLt >-> Leq.
 Coercion leqlt_lt : LeqLt >-> Lt.
 
-(* define others as needed *)
+Class ApartLeq T := apartleq : RR_Class T.
+
+Notation "(<> <=)" := apartleq.
+
+Instance apartleq_apart : forall {T}, ApartLeq T -> Apart T := RR_R1.
+Instance apartleq_leq : forall {T}, ApartLeq T -> Leq T := RR_R2.
+Coercion apartleq_apart : ApartLeq >-> Apart.
+Coercion apartleq_leq : ApartLeq >-> Leq.
 
 (******************* 3 Relations ****************)
 
@@ -138,25 +145,97 @@ Instance oprel_rel : forall {T}, OpRel T -> Rel T := LR_R.
 Coercion oprel_op : OpRel >-> Gop.
 Coercion oprel_rel : OpRel >-> Rel.
 
-Class PlusApart T := plusapart : OpRel T.
+
+Class PlusRel T := plusrel :> OpRel T.
+
+Notation "(+ ~>)" := plusrel (only parsing).
+
+Instance plusrel_plus : forall {T}, PlusRel T -> Plus T := @oprel_op.
+Coercion plusrel_plus : PlusRel >-> Plus.
+Coercion plusrel : PlusRel >-> OpRel.
+
+Class MultRel T := multrel :> OpRel T.
+
+Notation "(° ~>)" := multrel (only parsing).
+
+Instance multrel_mult : forall {T}, MultRel T -> Mult T := @oprel_op.
+Coercion multrel_mult : MultRel >-> Mult.
+Coercion multrel : MultRel >-> OpRel.
+
+Class OpApart T := opapart :> OpRel T.
+
+Notation "(& <>)" := opapart (only parsing).
+
+Instance opapart_apart : forall {T}, OpApart T -> Apart T := @oprel_rel.
+Coercion opapart_apart : OpApart >-> Apart.
+Coercion opapart : OpApart >-> OpRel.
+
+Class OpLeq T := opleq :> OpRel T.
+
+Notation "(& <=)" := opleq (only parsing).
+
+Instance opleq_leq : forall {T}, OpLeq T -> Leq T := @oprel_rel.
+Coercion opleq_leq : OpLeq >-> Leq.
+Coercion opleq : OpLeq >-> OpRel.
+
+Class OpLt T := oplt :> OpRel T.
+
+Notation "(& <)" := oplt (only parsing).
+
+Instance oplt_lt : forall {T}, OpLt T -> Lt T := @oprel_rel.
+Coercion oplt_lt : OpLt >-> Lt.
+Coercion oplt : OpLt >-> OpRel.
+
+
+Class PlusApart T := plusapart :> PlusRel T.
 
 Notation "(+ <>)" := plusapart (only parsing).
 
-Instance plusapart_plus : forall {T}, PlusApart T -> Plus T := @oprel_op.
-Instance plusapart_apart : forall {T}, PlusApart T -> Apart T := @oprel_rel.
-Coercion plusapart_plus : PlusApart >-> Plus.
-Coercion plusapart_apart : PlusApart >-> Apart.
+Instance plusapart_opapart {T} : PlusApart T -> OpApart T := idmap.
+Coercion plusapart_opapart : PlusApart >-> OpApart.
+Coercion plusapart : PlusApart >-> PlusRel.
 
-Class MultApart T := multapart : OpRel T.
+Class MultApart T := multapart : MultRel T.
 
 Notation "(° <>)" := multapart (only parsing).
 
-Instance multapart_mult : forall {T}, MultApart T -> Mult T := @oprel_op.
-Instance multapart_apart : forall {T}, MultApart T -> Apart T := @oprel_rel.
-Coercion multapart_mult : MultApart >-> Mult.
-Coercion multapart_apart : MultApart >-> Apart.
+Instance multapart_opapart {T} : MultApart T -> OpApart T := idmap.
+Coercion multapart_opapart : MultApart >-> OpApart.
+Coercion multapart : MultApart >-> MultRel.
 
-(*others as needed*)
+
+Class PlusLeq T := plusleq :> PlusRel T.
+
+Notation "(+ <=)" := plusleq (only parsing).
+
+Instance plusleq_opleq {T} : PlusLeq T -> OpLeq T := idmap.
+Coercion plusleq_opleq : PlusLeq >-> OpLeq.
+Coercion plusleq : PlusLeq >-> PlusRel.
+
+Class MultLeq T := multleq : MultRel T.
+
+Notation "(° <=)" := multleq (only parsing).
+
+Instance multleq_opleq {T} : MultLeq T -> OpLeq T := idmap.
+Coercion multleq_opleq : MultLeq >-> OpLeq.
+Coercion multleq : MultLeq >-> MultRel.
+
+
+Class PlusLt T := pluslt :> PlusRel T.
+
+Notation "(+ <)" := pluslt (only parsing).
+
+Instance pluslt_oplt {T} : PlusLt T -> OpLt T := idmap.
+Coercion pluslt_oplt : PlusLt >-> OpLt.
+Coercion pluslt : PlusLt >-> PlusRel.
+
+Class MultLt T := multlt : MultRel T.
+
+Notation "(° <)" := multlt (only parsing).
+
+Instance multlt_oplt {T} : MultLt T -> OpLt T := idmap.
+Coercion multlt_oplt : MultLt >-> OpLt.
+Coercion multlt : MultLt >-> MultRel.
 
 (******************* LLR ***********************)
 
@@ -198,12 +277,27 @@ Notation "(+ ° <=)" := preringleq (only parsing).
 Instance preringleq_leq : forall {T}, PreringLeq T -> Leq T := @preringrel_rel.
 Coercion preringleq_leq : PreringLeq >-> Leq.
 
+Instance preringleq_plusleq : forall {T}, PreringLeq T -> PlusLeq T
+ := fun T L => BuildLR_Class T (+) (<=).
+Instance preringleq_multleq : forall {T}, PreringLeq T -> MultLeq T
+ := fun T L => BuildLR_Class T (°) (<=).
+Coercion preringleq_plusleq : PreringLeq >-> PlusLeq.
+Coercion preringleq_multleq : PreringLeq >-> MultLeq.
+
+
 Class PreringLt T := preringlt :> PreringRel T.
 Coercion preringlt : PreringLt >-> PreringRel.
 Notation "(+ ° <)" := preringlt (only parsing).
 
 Instance preringlt_lt : forall {T}, PreringLt T -> Lt T := @preringrel_rel.
 Coercion preringlt_lt : PreringLt >-> Lt.
+
+Instance preringlt_pluslt : forall {T}, PreringLt T -> PlusLt T
+ := fun T L => BuildLR_Class T (+) (<).
+Instance preringlt_multlt : forall {T}, PreringLt T -> MultLt T
+ := fun T L => BuildLR_Class T (°) (<).
+Coercion preringlt_pluslt : PreringLt >-> PlusLt.
+Coercion preringlt_multlt : PreringLt >-> MultLt.
 
 (****************** LLRR *******************)
 
@@ -233,7 +327,7 @@ Instance preringstrict_strict :  forall {T}, PreringStrict T -> ApartLt T
  := fun T G => BuildRR_Class T (LLRR_R1 T G) (LLRR_R2 T G).
 Coercion preringstrict_strict : PreringStrict >-> ApartLt.
 
-(* etc *)
+(* no LRR_Class ? *)
 
 (****************** LLRRR *******************)
 
@@ -261,7 +355,11 @@ Instance preringfull_strict : forall {T}, PreringFull T -> PreringStrict T
                                  (LLRRR_R1 T G) (LLRRR_R3 T G).
 Coercion preringfull_strict : PreringFull >-> PreringStrict.
 
-(* etc *)
+Instance preringfull_preringleq : forall {T}, PreringFull T -> PreringLeq T
+ := fun T G => BuildLLR_Class T (LLRRR_L1 T G) (LLRRR_L2 T G) (LLRRR_R2 T G).
+Coercion preringfull_preringleq : PreringFull >-> PreringLeq.
+
+(* no LRRR_Class ? *)
 
 End Signatures.
 
@@ -466,6 +564,9 @@ apart_tight : forall x y : T, ~ x <> y -> x=y
 Coercion apart_irrefl : Apartness >-> Irreflexive.
 Coercion apart_symm : Apartness >-> Symmetric.
 Coercion apart_cotrans : Apartness >-> Cotransitive.
+
+Class TrivialApart {T} (R : Apart T) := trivialapart
+ : forall x y : T, x<>y <-> x!=y.
 
 Class Linear {T} (R : Leq T) := 
  islinear : forall x y : T, minus1Trunc (x <= y \/ y <= x).
@@ -854,10 +955,10 @@ Instance finvP {F} {L : Prefield F} {Hf : IsField L}
 End Field.
 
 Module OrderedRing.
-Export Ring Relation OrderedMagma.
+Export Ring Field Relation OrderedMagma.
 
-Class IsPosPreserving {G} (L : PreringRel G)
- := ispospreserving : forall zero : Identity (+),
+Class IsPosPreserving' {G} (L : PreringRel G)
+ := ispospreserving' : forall zero : Identity (+),
                       forall x y : G, rrel (g_id (+)) x
                                    -> rrel (g_id (+)) y 
                                    -> rrel (g_id (+)) (x°y).
@@ -866,7 +967,7 @@ Class IsSemiringOrder {G} (L : PreringLeq G) := BuildIsSemiringOrder {
 srorder_po :> Poset L;
 srorder_partial_minus : forall x y : G, x <= y -> exists z, y = x + z;
 srorder_plus :> forall z : G, IsEmbedding L L (plus z);
-nonneg_mult_compat :> IsPosPreserving L
+nonneg_mult_compat :> IsPosPreserving' L
 }.
 Coercion srorder_po : IsSemiringOrder >-> Poset.
 Coercion srorder_plus : IsSemiringOrder >-> Funclass.
@@ -876,7 +977,7 @@ Class IsStrictSemiringOrder {G} (L : PreringLt G) :=
 strict_srorder_so :> StrictOrder L;
 strict_srorder_partial_minus : forall x y : G, x < y -> exists z, y = x + z;
 strict_srorder_plus :> forall z : G, IsEmbedding L L (plus z);
-pos_mult_compat :> IsPosPreserving L
+pos_mult_compat :> IsPosPreserving' L
 }.
 Coercion strict_srorder_so : IsStrictSemiringOrder >-> StrictOrder.
 Coercion strict_srorder_plus : IsStrictSemiringOrder >-> Funclass.
@@ -888,7 +989,7 @@ pseudo_srorder_partial_minus : forall x y : G, ~y < x -> exists z, y = x + z;
 pseudo_srorder_plus :> forall z : G,
         IsEmbedding (<) (<) (plus z);
 pseudo_srorder_mult_ext :> IsBinRegular (° <>);
-pseudo_srorder_pos_mult_compat :> IsPosPreserving (+ ° <)
+pseudo_srorder_pos_mult_compat :> IsPosPreserving' (+ ° <)
 }.
 Coercion pseudo_srorder_strict : IsPseudoSemiringOrder >-> PseudoOrder.
 Coercion pseudo_srorder_plus : IsPseudoSemiringOrder >-> Funclass.
@@ -900,6 +1001,23 @@ full_pseudo_srorder_pso :> IsPseudoSemiringOrder L;
 full_pseudo_srorder_le_iff_not_lt_flip : forall x y : G, x <= y <-> ~y < x
 }.
 Coercion full_pseudo_srorder_pso : FullPseudoSemiringOrder >-> IsPseudoSemiringOrder.
+
+
+Class FullField {G} (L : PreringFull G) := BuildFullField {
+fullfield_field :> IsField L;
+fullfield_srorder :> FullPseudoSemiringOrder L
+}.
+Coercion fullfield_field : FullField >-> IsField.
+Coercion fullfield_srorder : FullField >-> FullPseudoSemiringOrder.
+
+Class IsPosPreserving {G} (L : PreringRel G) {Hg : IsSemiring L}
+ := ispospreserving : forall x y : G, rrel ZeroV x
+                                   -> rrel ZeroV y 
+                                   -> rrel ZeroV (x°y).
+
+Instance pospreserving_get {G} (L : PreringRel G) {Hg : IsSemiring L}
+ {Hp : IsPosPreserving' L} : IsPosPreserving L := Hp _.
+
 
 End OrderedRing.
 
