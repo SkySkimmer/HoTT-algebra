@@ -15,12 +15,25 @@ Fixpoint nplus (n m : nat) : nat := match n with
   | 0 => m
   end.
 
-Instance nat_plus : Plus nat := nplus.
-
 Definition npred (n : nat) : nat := match n with
   | S k => k
   | _ => 0
   end.
+
+Fixpoint nmult (n m : nat) : nat := match n with
+  | S k => nplus m (nmult k m)
+  | 0 => 0
+  end.
+
+Inductive nle (n : nat) : nat -> Type :=
+  | nle_n : nle n n
+  | nle_S : forall m : nat, nle n m -> nle n (S m).
+
+Definition nlt n := nle (S n).
+
+Canonical Structure nat_LLRRR : PreringFull nat
+ := BuildLLRRR_Class nat nplus nmult neq nle nlt.
+Global Existing Instance nat_LLRRR.
 
 Lemma S_0_neq : forall n, S n = 0 -> Empty.
 Proof.
@@ -74,34 +87,35 @@ induction n;intros. reflexivity.
 apply (ap S). apply IHn.
 Defined.
 
-Instance nplus_comm : Commutative nat_plus.
+Instance nplus_comm : Commutative (+).
 Proof.
 red. induction y. apply nplus_0_r.
-unfold gop;simpl. eapply concat;[| apply ap; apply IHy].
+unfold gop in *. change (x + S y = S (y+x)).
+eapply concat;[| apply ap; apply IHy].
 apply nplus_S_r.
 Defined.
 
-Instance nplus_assoc : Associative nat_plus.
+Instance nplus_assoc : Associative (+).
 Proof.
 red. induction x. intros;reflexivity.
-intros;unfold gop;simpl. apply ap;apply IHx.
+intros;unfold gop. apply (ap S);apply IHx.
 Defined.
 
-Instance nplus_is_sg : IsSemigroup nat_plus. split;apply _. Defined.
+Instance nplus_is_sg : IsSemigroup (+). split;apply _. Defined.
 
-Instance n0_is_id : IsId nat_plus 0.
+Instance n0_is_id : IsId (+) 0.
 Proof.
 split. intro;reflexivity.
 exact nplus_0_r.
 Defined.
 
-Canonical Structure nplus_identity : Identity nat_plus := BuildIdentity _ _ _.
+Canonical Structure nplus_identity : Identity (+) := BuildIdentity _ _ _.
 Existing Instance nplus_identity.
 
-Instance nat_plus_ismono : IsMonoid nat_plus
+Instance nplus_ismono : IsMonoid (+)
  := BuildIsMonoid _ _ nplus_identity.
 
-Instance nplus_left_cancel : forall n : nat, Lcancel nat_plus n.
+Instance nplus_left_cancel : forall n : nat, Lcancel (+) n.
 Proof.
 induction n;red;intros.
 assumption.
@@ -109,36 +123,25 @@ unfold gop in H;simpl in H. apply IHn.
 apply (ap npred H).
 Defined.
 
-Instance nplus_right_cancel : forall n : nat, Rcancel nat_plus n.
+Instance nplus_right_cancel : forall n : nat, Rcancel (+) n.
 Proof.
 induction n;red;intros.
 eapply concat;[|eapply concat;[apply H|]].
 apply inverse;apply nplus_0_r. apply nplus_0_r.
 apply IHn.
-assert (S (gop b n) = S (gop c n)).
+assert (S (b + n) = S (c + n)).
 eapply concat. symmetry. apply nplus_S_r. eapply concat. apply H.
 apply nplus_S_r.
 apply (ap npred X).
 Defined.
 
-Instance nplus_cancel : forall n : nat, Cancel nat_plus n.
+Instance nplus_cancel : forall n : nat, Cancel (+) n.
 Proof.
 intros. split;apply _.
 Defined.
 
-Instance nat_plus_cmono : IsCMonoid nat_plus := BuildIsCMonoid _ _ _.
+Instance nplus_cmono : IsCMonoid (+) := BuildIsCMonoid _ _ _.
 
-
-Fixpoint nmult (n m : nat) : nat := match n with
-  | S k => m + (nmult k m)
-  | 0 => 0
-  end.
-
-Global Instance nat_mult : Mult nat := nmult.
-
-Global Instance nat_prering : Prering nat :=
- (BuildLL_Class _ nat_plus nat_mult).
-Canonical Structure nat_prering.
 
 Definition nmult_0_l : forall m, 0 ° m = 0 := fun _ => idpath.
 
@@ -166,7 +169,7 @@ eapply concat;[|apply nplus_assoc]. apply ap.
 apply IHn.
 Defined.
 
-Instance nmult_comm : Commutative nat_mult.
+Instance nmult_comm : Commutative (°).
 Proof.
 red. induction y.
 - simpl. apply nmult_0_r.
@@ -174,7 +177,7 @@ red. induction y.
   eapply concat;[|symmetry;apply nmult_S_l]. apply ap. assumption.
 Defined.
 
-Instance nat_distrib_left : Ldistributes nat_prering.
+Instance nat_distrib_left : Ldistributes nat_LLRRR.
 Proof.
 red. induction a;intros.
 reflexivity.
@@ -191,7 +194,7 @@ eapply concat;[| apply nplus_assoc]. apply ap.
 apply nplus_comm.
 Defined.
 
-Instance nat_distrib_right : Rdistributes nat_prering.
+Instance nat_distrib_right : Rdistributes nat_LLRRR.
 Proof.
 red. intros.
 simpl.
@@ -200,45 +203,46 @@ eapply concat. apply nat_distrib_left.
 apply ap11;[ apply ap |];apply nmult_comm.
 Defined.
 
-Instance nat_distrib : Distributes nat_prering.
+Instance nat_distrib : Distributes nat_LLRRR.
 Proof.
 split;apply _.
 Defined.
 
-Instance nmult_assoc : Associative nat_mult.
+Instance nmult_assoc : Associative (°).
 Proof.
-red. induction x;intros;simpl.
+red. unfold gop. induction x;intros.
 reflexivity.
-unfold gop;simpl.
-eapply concat;[| symmetry;apply nat_distrib].
+eapply concat;[apply nmult_S_l|].
+eapply concat;[| symmetry;apply nat_distrib]. fold nmult.
+change nmult with mult.
 apply ap. apply IHx.
 Defined.
 
 
-Instance nmult_issg : IsSemigroup nat_mult := BuildIsSemigroup _ _ _.
+Instance nmult_issg : IsSemigroup (°) := BuildIsSemigroup _ _ _.
 
-Instance nmult_1_l : Left_id nat_mult 1.
+Instance nmult_1_l : Left_id (°) 1.
 Proof.
 red. simpl. apply nplus_0_r.
 Defined.
 
-Instance nmult_1_r : Right_id nat_mult 1.
+Instance nmult_1_r : Right_id (°) 1.
 Proof.
 red. intros. eapply concat. apply nmult_comm.
 apply nmult_1_l.
 Defined.
 
-Instance nmult_1_id : IsId nat_mult 1.
+Instance nmult_1_id : IsId (°) 1.
 Proof.
 split;apply _.
 Defined.
 
-Canonical Structure nmult_identity : Identity nat_mult := BuildIdentity _ _ _.
+Canonical Structure nmult_identity : Identity (°) := BuildIdentity _ _ _.
 Existing Instance nmult_identity.
 
-Instance nmult_ismono : IsMonoid nat_mult := BuildIsMonoid _ _ nmult_identity.
+Instance nmult_ismono : IsMonoid (°) := BuildIsMonoid _ _ nmult_identity.
 
-Global Instance nat_issemiring : IsSemiring nat_prering.
+Global Instance nat_issemiring : IsSemiring nat_LLRRR.
 Proof.
 apply BuildIsSemiring;apply _.
 Defined.
@@ -274,12 +278,12 @@ intros n m;intros. destruct n.
 - right;symmetry;eapply nmult_S_0_back. symmetry;apply H.
 Defined.
 
-Instance nmult_strict_integral : IsStrictIntegral nat_prering.
+Instance nmult_strict_integral : IsStrictIntegral nat_LLRRR.
 Proof.
 red;intros;apply min1;apply nmult_integral;assumption.
 Defined.
 
-Instance nmult_left_cancel : forall n, Lcancel nat_mult (S n).
+Instance nmult_left_cancel : forall n, Lcancel (°) (S n).
 Proof.
 intros n m;induction m;simpl in *;intros m' H.
 assert (X:m' + (n°m') = 0). eapply concat. symmetry;apply H.
@@ -291,36 +295,28 @@ assert (X:(S n) ° (S m)=0). eapply concat. apply H. apply nmult_0_r.
 apply inverse in X;apply nmult_integral in X.
 destruct X as [X | X];apply inverse in X;apply S_0_neq in X;destruct X.
 
-apply ap. apply IHm. change gop with mult in *.
-apply nplus_right_cancel with (S n). change gop with plus.
+apply ap. apply IHm. unfold gop in *.
+apply nplus_right_cancel with (S n). unfold gop.
 eapply concat;[|eapply concat;[apply H|]].
-unfold mult;simpl. change nat_mult with mult.
-symmetry. eapply concat. apply ap. apply nmult_S_r.
-symmetry;eapply concat. apply nplus_S_r. apply (ap S). fold nplus.
-symmetry;apply (@associative _ nat_plus _).
-eapply concat. unfold mult;simpl;apply ap;apply nmult_S_r.
-eapply concat;[|symmetry;apply nplus_S_r]. apply (ap S).
-fold nplus. apply (@associative _ nat_plus _).
+unfold mult;simpl. change nmult with mult. change nplus with plus.
+symmetry. eapply concat. apply ap. apply ap. apply nmult_S_r.
+symmetry;eapply concat. apply nplus_S_r. apply (ap S).
+symmetry;apply (associative (+) _).
+eapply concat. unfold mult;simpl;apply ap;apply ap. apply nmult_S_r.
+unfold mult;simpl.
+change nplus with plus;change nmult with mult.
+eapply concat;[|symmetry;apply nplus_S_r]. apply ap.
+apply associative;apply _.
 Defined.
 
-Global Instance nmult_cancel : forall n, Cancel (nat_mult) (S n).
+Global Instance nmult_cancel : forall n, Cancel ((°)) (S n).
 Proof.
 intro;apply left_cancel_cancel. apply _.
 Defined.
 
-Inductive nle (n : nat) : nat -> Type :=
-  | nle_n : nle n n
-  | nle_S : forall m : nat, nle n m -> nle n (S m).
+Instance nle_refl : Reflexive (<=) := nle_n.
 
-Definition nlt n := nle (S n).
-
-Canonical Structure nat_LLRRR : PreringFull nat
- := BuildLLRRR_Class nat nplus nmult neq nle nlt.
-Global Existing Instance nat_LLRRR.
-
-Instance le_refl : Reflexive (<=) := nle_n.
-
-Lemma le_exists : forall n m : nat, n <= m -> exists k, k + n = m.
+Lemma nle_exists : forall n m : nat, n <= m -> exists k, k + n = m.
 Proof.
 intros n m H;induction H.
 exists 0;reflexivity.
@@ -329,36 +325,36 @@ apply (ap S).
 apply projT2.
 Defined.
 
-Lemma plus_le : forall n k : nat, n <= k + n.
+Lemma nplus_nle : forall n k : nat, n <= k + n.
 Proof.
 induction k.
 apply nle_n.
 simpl. apply nle_S. assumption.
 Defined.
 
-Definition exists_le : forall n m : nat, (exists k, k + n = m) -> n <= m.
+Definition exists_nle : forall n m : nat, (exists k, k + n = m) -> n <= m.
 Proof.
 intros.
 destruct H as [k []].
-apply plus_le.
+apply nplus_nle.
 Defined.
 
-Lemma le_exists_le : forall n m H, le_exists n m (exists_le n m H) = H.
+Lemma nle_exists_nle : forall n m H, nle_exists n m (exists_nle n m H) = H.
 Proof.
 intros n m H. destruct H as [k []].
 simpl. clear m. induction k.
 reflexivity.
-path_via (le_exists n (S (k + n)) (plus_le n (S k))).
+path_via (nle_exists n (S (k + n)) (nplus_nle n (S k))).
 simpl. fold nplus.
-change (nplus k n) with (k + n).
+change nplus with plus;simpl.
 rewrite IHk.
-simpl. reflexivity.
+reflexivity.
 Defined.
 
-Instance le_antisymm : Antisymmetric (<=).
+Instance nle_antisymm : Antisymmetric (<=).
 Proof.
 intros n m H H0.
-apply le_exists in H. apply le_exists in H0.
+apply nle_exists in H. apply nle_exists in H0.
 destruct H as [k Hk];destruct H0 as [k' Hk'].
 destruct k. apply Hk.
 destruct k'. symmetry;apply Hk'.
@@ -373,7 +369,7 @@ apply nplus_right_cancel in H'.
 apply S_0_neq in H'. destruct H'.
 Defined.
 
-Lemma le_n_back : forall n (H : n <= n), H = nle_n n.
+Lemma nle_n_back : forall n (H : n <= n), H = nle_n n.
 Proof.
 assert (H: forall n m (H : n <= m) (p : m = n), transport _ p H = nle_n n).
 induction H.
@@ -381,7 +377,7 @@ intros. assert (X : p = idpath). apply axiomK_hset. apply _.
 pattern p. eapply transport. symmetry. apply X.
 simpl. reflexivity.
 intros.
-assert (H' : n = m). apply le_antisymm. assumption.
+assert (H' : n = m). apply nle_antisymm. assumption.
 destruct p. apply nle_S. apply nle_n.
 assert (H0 : 1 + m = 0 + m). simpl. path_via n.
 clear H'. apply nplus_right_cancel in H0. apply S_0_neq in H0. destruct H0.
@@ -389,24 +385,24 @@ clear H'. apply nplus_right_cancel in H0. apply S_0_neq in H0. destruct H0.
 intros. apply (H n n H0 idpath).
 Defined.
 
-Lemma le_S_n_n_not : forall n, ~ (S n) <= n.
+Lemma nle_S_n_n_not : forall n, ~ (S n) <= n.
 Proof.
 red;intros.
 assert (H' : 1 + n = 0 + n).
-simpl. apply le_antisymm. assumption.
+simpl. apply nle_antisymm. assumption.
 apply nle_S;apply nle_n.
 apply nplus_right_cancel in H'. eapply S_0_neq;apply H'.
 Defined.
 
-Lemma le_S_back : forall n m, n <= m -> forall H : n <= S m,
+Lemma nle_S_back : forall n m, n <= m -> forall H : n <= S m,
  exists H', H = nle_S _ _ H'.
 Proof.
 assert (X :forall n m (H : n <= m) m0 (p : m = S m0) (H0 : n <= m0), 
  exists H' : n <= m0, transport _ p H = nle_S _ _ H').
 induction H;intros.
 apply Empty_rect. apply S_0_neq with 0.
-apply nplus_right_cancel with m0. unfold gop;simpl.
-apply le_antisymm. pattern (S m0);eapply transport. apply p. assumption.
+apply nplus_right_cancel with m0. unfold gop.
+apply nle_antisymm. pattern (1 + m0);eapply transport. apply p. assumption.
 apply nle_S;apply nle_n.
 assert (p' : m = m0). apply (ap npred p). destruct p'.
 pattern p. eapply transport. symmetry. apply axiomK_hset. apply _.
@@ -415,39 +411,39 @@ simpl. exists H;reflexivity.
 intros. apply (X n (S m) H0 m idpath H).
 Defined.
 
-Lemma exists_le_exists : forall n m H, exists_le n m (le_exists n m H) = H.
+Lemma exists_nle_exists : forall n m H, exists_nle n m (nle_exists n m H) = H.
 Proof.
 intros.
-destruct (le_exists n m H).
+destruct (nle_exists n m H).
 destruct p.
 simpl.
 induction x.
 simpl.
-symmetry;apply le_n_back.
+symmetry;apply nle_n_back.
 simpl.
 simpl in H.
 
-destruct (le_S_back n (x+n) (plus_le _ _) H).
- pattern (plus_le n x). eapply transport. symmetry. apply IHx.
+destruct (nle_S_back n (x+n) (nplus_nle _ _) H).
+ pattern (nplus_nle n x). eapply transport. symmetry. apply IHx.
 symmetry. apply p.
 Defined.
 
-Instance le_exists_isequiv : forall n m, IsEquiv (le_exists n m).
+Instance nle_exists_isequiv : forall n m, IsEquiv (nle_exists n m).
 Proof.
-intros. apply isequiv_adjointify with (exists_le n m).
-red;apply le_exists_le.
-red;apply exists_le_exists.
+intros. apply isequiv_adjointify with (exists_nle n m).
+red;apply nle_exists_nle.
+red;apply exists_nle_exists.
 Defined.
 
-Lemma le_equiv_plus : forall n m : nat, (n <= m) <~> (exists k, k + n = m).
+Lemma nle_equiv_nplus : forall n m : nat, (n <= m) <~> (exists k, k + n = m).
 Proof.
 intros. eapply BuildEquiv. apply _.
 Defined.
 
-Instance le_prop : forall n m : nat, IsHProp (n <= m).
+Instance nle_prop : forall n m : nat, IsHProp (n <= m).
 Proof.
 intros. eapply trunc_equiv'. apply symmetric_equiv.
-apply le_equiv_plus.
+apply nle_equiv_nplus.
 apply hprop_inhabited_contr. intro X.
 apply BuildContr with X. intro Y.
 destruct X as [k Hk];destruct Y as [k' Hk'].
@@ -457,76 +453,77 @@ apply path_sigma with p.
 apply nat_set.
 Defined.
 
-Lemma le_0 : forall n, 0 <= n.
+Lemma nle_0 : forall n, 0 <= n.
 Proof.
 induction n;constructor;auto.
 Defined.
 
-Lemma le_S_S_back : forall n m, S n <= S m -> n <= m.
+Lemma nle_S_S_back : forall n m, S n <= S m -> n <= m.
 Proof.
-intros. apply le_exists in H. apply exists_le.
+intros. apply nle_exists in H. apply exists_nle.
 destruct H as [k H]. exists k.
 assert (X : S (k + n) = S m). path_via (k + S n). symmetry. apply nplus_S_r.
 apply (ap npred X).
 Defined.
 
-Instance le_trans : Transitive (<=).
+Instance nle_trans : Transitive (<=).
 Proof.
 intros x y z H;revert z;induction H;intros. assumption.
 destruct z.
-refine (Empty_rect _ (S_0_neq m _)). apply le_antisymm. assumption. apply le_0.
-apply le_S_S_back in H0. apply IHnle. apply nle_S. assumption.
+refine (Empty_rect _ (S_0_neq m _)). apply nle_antisymm. assumption.
+apply nle_0.
+apply nle_S_S_back in H0. apply IHnle. apply nle_S. assumption.
 Defined.
 
-Lemma lt_not_le : forall n m : nat, n < m -> ~ m <= n.
+Lemma nlt_not_nle : forall n m : nat, n < m -> ~ m <= n.
 Proof.
 red;intros.
 red in H. apply S_0_neq with 0. apply nplus_right_cancel with n.
-simpl. apply le_antisymm. eapply le_trans. apply H. assumption.
+simpl. apply nle_antisymm. eapply nle_trans. apply H. assumption.
 apply nle_S;apply nle_n.
 Defined.
 
-Lemma le_S_S : forall n m, n <= m -> (S n) <= (S m).
+Lemma nle_S_S : forall n m, n <= m -> (S n) <= (S m).
 Proof.
 intros n m H;induction H.
 apply nle_n.
 apply nle_S;assumption.
 Defined.
 
-Definition le_lt_dec : forall n m : nat, (n <= m) + (m < n).
+Definition nle_nlt_dec : forall n m : nat, (n <= m) + (m < n).
 Proof.
   intros n m.
   induction n in m |- *.
-  left. apply le_0.
+  left. apply nle_0.
   destruct m.
-  right. apply le_S_S. apply le_0.
+  right. apply nle_S_S. apply nle_0.
   destruct (IHn m).
-  left. apply le_S_S;assumption.
-  right. apply le_S_S;assumption.
+  left. apply nle_S_S;assumption.
+  right. apply nle_S_S;assumption.
 Defined.
 
-Lemma not_le_lt : forall n m : nat, ~ m <= n -> n < m.
+Lemma not_nle_nlt : forall n m : nat, ~ m <= n -> n < m.
 Proof.
 intros.
-destruct (le_lt_dec m n). apply Empty_rect;auto.
+destruct (nle_nlt_dec m n). apply Empty_rect;auto.
 assumption.
 Defined.
 
-Instance le_dec : Decidable (<=).
+Instance nle_dec : Decidable (<=).
 Proof.
-intros n m;destruct (le_lt_dec n m).
+intros n m;destruct (nle_nlt_dec n m).
 left;assumption.
-right;apply lt_not_le;assumption.
+right;apply nlt_not_nle;assumption.
 Defined.
 
-Instance le_linear : ConstrLinear (<=).
+Instance nle_linear : ConstrLinear (<=).
 Proof.
-intros n m. destruct (le_lt_dec n m). left;assumption.
-right. apply le_trans with (S m). apply nle_S;apply nle_n.
+intros n m. destruct (nle_nlt_dec n m). left;assumption.
+right. apply nle_trans with (S m). apply nle_S;apply nle_n.
 assumption.
 Defined.
 
-Global Instance le_total_order : ConstrTotalOrder (<=).
+Global Instance nle_total_order : ConstrTotalOrder (<=).
 Proof.
 constructor;[constructor|];apply _.
 Defined.
@@ -534,19 +531,19 @@ Defined.
 Lemma nlt_iff_nle_neq : forall n m : nat, n<m <-> (n<=m /\ neq n m).
 Proof.
 intros;split;intros H.
-change (nlt n m) in H. apply le_exists in H.
+change (nlt n m) in H. apply nle_exists in H.
 destruct H as [k H].
 assert (H' : (S k) + n = m). path_via (k + S n).
 path_via (S (k+n)). symmetry. apply nplus_S_r. clear H. destruct H'.
-split. apply plus_le.
+split. apply nplus_nle.
 intro H. change (O+n = S k + n) in H.
 apply nplus_right_cancel in H.
 eapply S_0_neq. apply inverse;apply H.
 destruct H as [H H0].
-apply le_exists in H. destruct H as [k H].
+apply nle_exists in H. destruct H as [k H].
 destruct k. destruct H0.
 assumption.
-apply exists_le. exists k.
+apply exists_nle. exists k.
 path_via (S k + n). path_via (S (k+n)). apply nplus_S_r.
 Defined.
 
@@ -554,7 +551,7 @@ Lemma nle_iff_nlt_eq : forall n m : nat, n<=m <-> (n<m \/ n=m).
 Proof.
 intros;split;intros H.
 destruct H. right;reflexivity.
-left. apply le_S_S. assumption.
+left. apply nle_S_S. assumption.
 destruct H. apply transitivity with (S n). apply nle_S. apply nle_n.
 assumption.
 destruct p;apply nle_n.
@@ -563,16 +560,16 @@ Defined.
 Lemma nle_iff_not_nlt_flip : forall n m:nat, n<=m <-> ~m<n.
 Proof.
 intros;split;intro H.
-intro H'. eapply lt_not_le;[apply H'|apply H].
-destruct (le_lt_dec n m). assumption.
+intro H'. eapply nlt_not_nle;[apply H'|apply H].
+destruct (nle_nlt_dec n m). assumption.
 destruct H;assumption.
 Defined.
 
-Instance nle_plus_linvariant : IsLInvariant (+ <=).
+Instance nle_nplus_linvariant : IsLInvariant (+ <=).
 Proof.
 red;red. unfold gop;unfold rrel. simpl.
 simpl.
-intros. apply exists_le. apply le_exists in H.
+intros. apply exists_nle. apply nle_exists in H.
 destruct H as [k []]. exists k.
 path_via ((k+z)+x). apply associative;apply _.
 path_via ((z+k)+x). apply (ap (fun g => g + _)). apply commutative;apply _.
@@ -594,7 +591,7 @@ Proof.
 assert (forall z, IsLRegular (+ <=) z). red;red.
 unfold rrel;unfold gop;simpl.
 intros ? ? ? H.
-apply le_exists in H;apply exists_le.
+apply nle_exists in H;apply exists_nle.
 destruct H as [k H].
 exists k. apply nplus_cancel with z.
 path_via (k + (z+x)).
@@ -613,6 +610,73 @@ apply commutative;apply _.
 assumption.
 Defined.
 
+Lemma not_nlt_nle : forall n m : nat, ~ n < m -> m <= n.
+Proof.
+intros.
+destruct (nle_nlt_dec m n). assumption.
+destruct X;assumption.
+Defined.
+
+Lemma nlt_nle : forall n m : nat, n < m -> n <= m.
+Proof.
+intros. apply nle_trans with (S n). apply nle_S;apply nle_n.
+assumption.
+Defined.
+
+Global Instance nat_trichotomic : Trichotomic nat_LLRRR.
+Proof.
+red. intros.
+destruct (nle_nlt_dec y x). right. destruct (nle_nlt_dec x y).
+left. apply nle_antisymm;assumption.
+right;assumption.
+left;assumption.
+Defined.
+
+Global Instance nat_fullpseudoorder : FullPseudoOrder nat_LLRRR.
+Proof.
+split.
+split.
+apply neq_apart. apply eq_nat_dec.
+intros;apply iff_refl.
+intros. apply nlt_not_nle in H0. apply H0.
+apply nlt_nle. assumption.
+
+red. unfold rrel. intros. apply min1.
+destruct (nle_nlt_dec z x).
+destruct (nle_nlt_dec y z).
+apply nlt_not_nle in H. destruct H. apply nle_trans with z;assumption.
+right;assumption.
+left;assumption.
+
+intros. split;intro H.
+destruct (nat_trichotomic x y) as [H' | [H' | H']];auto.
+destruct H;assumption.
+intro H'. destruct H'.
+destruct H as [H|H];apply nlt_iff_nle_neq in H;apply H;reflexivity.
+
+intros. split.
+intros H H';eapply nlt_not_nle;eauto.
+apply not_nlt_nle.
+Defined.
+
+Lemma nle_not_nlt : forall n m : nat, n <= m -> ~ m < n.
+Proof.
+intros ? ? H H'. eapply nlt_not_nle.
+apply H'. apply H.
+Defined.
+
+Lemma nle_n_S_n : forall n : nat, n <= S n.
+Proof.
+intros;apply nle_S;apply nle_n.
+Defined.
+
+Global Instance nat_fullpseudo : FullPseudoOrder nat_LLRRR.
+Proof.
+split;try apply _.
+
+split. apply nle_not_nlt.
+apply not_nlt_nle.
+Defined.
 
 End LocalInstances.
 

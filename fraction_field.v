@@ -236,9 +236,8 @@ assert (H:IsLInvariant fracAddEquivU);[|split;try assumption].
 red;red. unfold rrel;unfold gop;simpl.
 unfold fracEquiv;unfold fracAddU. simpl.
 intros [[za zb] Hz] [[xa xb] Hx] [[ya yb] Hy] H;simpl in *.
-ssrapply (@ast2_full_semiring G L _). simpl.
-apply ap;apply ap.
-unfold gop.
+ssrapply (@ast2_full_semiring G L _). simpl. unfold gop.
+apply ap.
 path_via ((zb°zb)°(xa°yb)).
 ssrapply (@ast_use G (°) _);reflexivity.
 path_via ((zb°zb)°(ya°xb)). apply ap;assumption.
@@ -491,8 +490,8 @@ destruct (Hdec ZeroV ZeroV) as [_|[]]; reflexivity.
 apply fracInv_inv.
 Defined.
 
-
 End VarSec.
+
 
 End Fraction.
 

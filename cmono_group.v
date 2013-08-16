@@ -182,8 +182,7 @@ Definition quotOppV : forall {Hsg : IsSemigroup L},
  quotU -> quotU.
 Proof.
 intros ?.
-apply (quotU_rect (fun _ => quotU) (fun x => match x with
-  | (a,b) => quotIn (b,a) end)).
+apply (quotU_rect (fun _ => quotU) (fun x => quotIn (snd x, fst x))).
 intros [xa xb] [ya yb] H.
 path_via (quotIn (xb, xa)).
 apply transport_const.
@@ -685,6 +684,38 @@ destruct (Hdec (fst x & snd y) (fst y & snd x)).
 left. apply repr_quotRel. assumption.
 right. intro H. apply quotRel_repr in H. apply n;assumption.
 Defined.
+
+Global Instance quotrel_irrefl {Hi : @Irreflexive G (~>)} : Irreflexive quotRel.
+Proof.
+red. apply (quotU_ind _ (fun x => _ -> _) _).
+intros. apply quotRel_repr in X. red in X.
+apply Hi in X. assumption.
+Defined.
+
+Global Instance quotrel_trichotomic {Hso : @StrictOrder G (~>)}
+ {Htri : @Trichotomic G (~>)} : Trichotomic quotRel.
+Proof.
+assert (forall x y : quotU L, IsHProp (x ~> y \/ (x=y \/ y ~> x))).
+intros. apply @hprop_sum. apply _.
+apply hprop_sum.
+intros H H'. destruct H. apply @quotrel_irrefl in H'. assumption.
+apply Hso.
+intros H' [H|H].
+destruct H. apply @quotrel_irrefl in H'. assumption. apply Hso.
+apply @quotrel_irrefl with x. apply Hso.
+apply @quotrel_trans with y;try assumption. apply Hso.
+
+red.
+apply (quotU_ind _ (fun x => forall y, _) _).
+intro x. apply (quotU_ind _ (fun y => _) _).
+intro y.
+
+destruct (Htri ((fst x) & (snd y)) ((fst y) & (snd x))) as [H|[H|H]];
+[left|right;left|right;right];
+first [apply repr_quotRel|apply related_classes_eq];
+assumption.
+Defined.
+
 
 End WithRel.
 
