@@ -649,11 +649,22 @@ etransitivity. apply H.
 apply nplus_0_r.
 Defined.
 
+Lemma z0_z1_apart : z0 <> z1.
+Proof.
+apply repr_quotRel.
+red;simpl. unfold rrel.
+intro H;apply inverse in H;apply S_0_neq in H;assumption.
+Defined.
+
+Lemma z0_z1_neq : z0 != z1.
+Proof.
+apply zApart_trivial. apply z0_z1_apart.
+Defined.
+
 
 Definition zAbs : Z -> nat.
 Proof.
 intros z.
-SearchAbout iff.
 destruct (isconstrlinear z0 z) as [H|H];
 exact ((zLeq_exists _ _ H).1).
 Defined.
@@ -692,7 +703,102 @@ change (zNat x = zNat n) in p.
 apply zNat_eq_embedding in p. assumption.
 Defined.
 
+(*NB: related_classes_eq means it doesn't compute well, so only use it for hprops*)
+Lemma z_posneg_ind : forall P : Z -> Type,
+(forall z, IsHProp (P z)) ->
+(forall n, P [n, 0]) -> (forall n, P [0, n]) ->
+forall z, P z.
+Proof.
+intros ? Hp Hv Hv'.
+apply z_ind'. apply _.
+intros x.
+destruct (isconstrlinear (snd x) (fst x));
+apply nle_exists in l;destruct l as [k H].
+apply transport with [k, 0].
+apply related_classes_eq. red. simpl. path_via (fst x).
+apply inverse;apply nplus_0_r.
+apply Hv.
+apply transport with [0, k].
+apply related_classes_eq. red. simpl. path_via (snd x).
+path_via (k + fst x). apply commutative. apply nat_issemiring.
+apply Hv'.
+Defined.
 
+Lemma zAbs_0_back : forall x : Z, 0 = zAbs x -> z0 = x.
+Proof.
+apply (z_posneg_ind (fun x => _ -> _) _).
+intros.
+assert (0 = n). path_via (zAbs [n, 0]). apply zAbs_pos_eval.
+apply (ap (fun k => [k, 0])). assumption.
+
+intros.
+assert (0 = n). path_via (zAbs [0, n]). apply zAbs_neg_eval.
+apply (ap (fun k => [0, k])). assumption.
+Defined.
+
+Lemma zAbs_zMult : forall a b, zAbs (a°b) = zAbs a ° zAbs b.
+Proof.
+apply (z_posneg_ind (fun x => forall y, _) _);intro n;
+apply (z_posneg_ind (fun y => _) _);intro m;apply (@concat _ _ (n°m)).
+
+- transitivity (zAbs [n°m, 0]).
+  apply (ap (fun x => zAbs (class_of _ x))).
+  unfold multU. simpl.
+  apply path_prod'.
+  apply nplus_0_r.
+  change (n°0 + m°0 = 0 + 0).
+  apply ap11;[apply ap|];apply nmult_0_r.
+  apply zAbs_pos_eval.
+- apply inverse;apply ap11;[apply ap|];apply zAbs_pos_eval.
+
+- transitivity (zAbs [0, n°m]).
+  apply (ap (fun x => zAbs (class_of _ x))).
+  unfold multU;simpl.
+  apply path_prod'.
+  apply (@concat _ _ (n°0)).
+  apply nplus_0_r. apply nmult_0_r.
+  apply nplus_0_r.
+  apply zAbs_neg_eval.
+- apply inverse;apply ap11;[apply ap|].
+  apply zAbs_pos_eval.
+  apply zAbs_neg_eval.
+
+- apply (@concat _ _ (zAbs [0, n°m])).
+  apply (ap (fun x => zAbs (class_of _ x))).
+  unfold multU;simpl.
+  apply path_prod'.
+  change (n°0 = 0). apply nmult_0_r.
+  change (m°n = n°m). apply nmult_comm.
+  apply zAbs_neg_eval.
+- apply inverse;apply ap11;[apply ap|].
+  apply zAbs_neg_eval.
+  apply zAbs_pos_eval.
+
+- apply(@concat _ _ (zAbs [n°m, 0])).
+  apply (ap (fun x => zAbs (class_of _ x))).
+  unfold multU;simpl;apply path_prod'.
+  reflexivity.
+  reflexivity.
+  apply zAbs_pos_eval.
+- apply inverse;apply ap11;[apply ap|];apply zAbs_neg_eval.
+Qed.
+
+Global Instance Z_strict_integral : IsStrictIntegral ZPrering.
+Proof.
+red.
+change ZeroV with [0, 0].
+intros. apply min1.
+apply (ap zAbs) in H.
+assert (H' : 0 = zAbs a ° zAbs b).
+apply (@concat _ _(zAbs (a°b))).
+apply (@concat _ _ (zAbs [0, 0])).
+apply inverse;apply zAbs_pos_eval.
+apply H.
+
+apply zAbs_zMult.
+apply nmult_integral in H'.
+clear H. destruct H' as [H|H];[left|right];apply zAbs_0_back;assumption.
+Defined.
 
 End NotaSec.
 
