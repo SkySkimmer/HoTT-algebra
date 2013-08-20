@@ -1278,6 +1278,29 @@ Proof.
 intros;split;[eapply rinverse_lregular|eapply linverse_rregular];apply Hinv.
 Defined.
 
+Lemma invariant_inverse_flip : forall `{G : OpRel T} {Hsg : IsSemigroup G}
+{Hr : IsLInvariant G}, forall x x', IsInverse G x x' ->
+forall y y', IsInverse G y y' -> x ~> y -> y' ~> x'.
+Proof.
+intros ? ? ? ? ? ? X ? ? Y ?.
+pattern y';apply transport with ((x' & y') & x);[|
+apply transport with ((x' & y') & y);[|apply Hr;assumption]].
+path_via ((x' & x) & y').
+path_via (x' & (y' & x)). symmetry;apply associative;apply _.
+path_via (x' & (x & y')). apply ap. apply commutative;apply _.
+apply associative;apply _.
+apply X.
+path_via (x' & (y' & y)). symmetry;apply associative;apply _.
+apply Y.
+Defined.
+
+Lemma gopp_rrel_flip : forall `{G : OpRel T} {Hg : IsGroup G}
+{Hr : IsLInvariant G}, forall x y, x ~> y -> goppV y ~> goppV x.
+Proof.
+intros ? ? ? ? ? ?.
+apply invariant_inverse_flip;apply goppP.
+Defined.
+
 End OrderedMagma_pr.
 
 Module Ring_pr.
@@ -1369,6 +1392,26 @@ Lemma ropp_rmult_right : forall `{G : Prering T} {Hg : IsRing G},
 Proof.
 intros. apply (@group_inverse_gopp _ (+)).
 eapply rmult_inverse_right. apply _.
+Defined.
+
+Lemma ropp_zero : forall `{G : Prering T} {Hg : IsRing G},
+roppV ZeroV = ZeroV.
+Proof.
+intros;apply (@gopp_gid).
+Defined.
+
+Lemma ropp_r : forall `{G : Prering T} {Hg : IsRing G},
+forall x : T, x + roppV x = ZeroV.
+Proof.
+intros. apply (id_unique (+)).
+apply roppP. apply Zero.
+Defined.
+
+Lemma ropp_l : forall `{G : Prering T} {Hg : IsRing G},
+forall x : T, roppV x + x = ZeroV.
+Proof.
+intros. apply (id_unique (+)).
+apply roppP. apply Zero.
 Defined.
 
 Definition isring_sig : forall `{G : Prering T},
@@ -1985,16 +2028,6 @@ End Field_of_DecField.
 
 End Field_pr.
 
-
-Module OrderedRing_pr.
-Export OrderedRing Ring_pr Relation_pr.
-
-
-
-
-
-
-End OrderedRing_pr.
 
 
 

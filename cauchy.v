@@ -161,6 +161,23 @@ Definition cauchyApprox (f : Tpos -> real) :=
 Axiom eqr : forall {x y : real}, (forall e : Tpos, equiv e x y) -> x=y.
 Axiom eqequiv : forall e x y (u v : equiv e x y), u=v.
 
+
+Axiom ADMIT : forall {P : Type}, P.
+
+Section Rect0.
+
+Variables (A : realU -> Type) (B : forall x, A x -> forall y, A y ->
+      forall e, equivU e -> Type).
+
+Fixpoint R_rect (r : realU) : A r := ADMIT
+
+with E_rect x y e (He : equivU e) : B x (R_rect r) y (R_rect y) e He
+ := ADMIT.
+
+End Rect0.
+
+
+
 Section Rect.
 
 Variables (A : real -> Type) (B : forall x, A x -> forall y, A y ->
@@ -205,16 +222,13 @@ Variable Heqequiv : forall (e : Tpos) (x y : real)
 (u : B x a y b e eq) (v : B x a y b e eq'),
   transport _ (eqequiv e x y _ _) u = v.
 
-Axiom ADMIT : forall {P : Type}, P.
+Fixpoint real_rect0 (x : realU) (Hx : correctR x) : A (existT _ x Hx)
+ := ADMIT
 
-Fixpoint real_rect (x : real) : A x := ADMIT
-
-with equiv_rect (x y : real) e (Heq : equiv e x y)
- : B x (real_rect x) y (real_rect y) e Heq := ADMIT.
-
-
-
-
+with equiv_rect0 (x : realU) (Hx : correctR x) (y : realU) (Hy : correctR y)
+(e : Tpos) (He : equivU e) (Hc : correctEq x y He)
+ : B _ (real_rect0 x Hx) _ (real_rect0 y Hy) e (existT _ He Hc)
+ := ADMIT.
 
 End Rect.
 

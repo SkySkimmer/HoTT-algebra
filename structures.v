@@ -1019,6 +1019,16 @@ Instance pospreserving_get {G} (L : PreringRel G) {Hg : IsSemiring L}
  {Hp : IsPosPreserving' L} : IsPosPreserving L := Hp _.
 
 
+
+Class IsFullDecField {G} (L : PreringFull G) := BuildIsFullDecField {
+fulldecfield_decfield :> IsDecField L;
+fulldecfield_fullpseudosrorder :> FullPseudoSemiringOrder L;
+fulldecfield_zero_lt_one : ZeroV < OneV
+}.
+Coercion fulldecfield_decfield : IsFullDecField >-> IsDecField.
+Coercion fulldecfield_fullpseudosrorder : IsFullDecField >->
+     FullPseudoSemiringOrder.
+
 End OrderedRing.
 
 
