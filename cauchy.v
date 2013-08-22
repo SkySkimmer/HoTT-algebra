@@ -1,5 +1,5 @@
 Require Import HoTT.
-
+Require Import FunextAxiom.
 Require Import basics syntax quotient minus1Trunc.
 
 Module Cauchy.
@@ -40,7 +40,7 @@ with equivU : T -> Type :=
 
 Local Inductive correctR : realU -> Type :=
   | co_rat : forall q, correctR (ratU q)
-  | co_lim : forall (f : Tpos -> realU)
+  | co_lim : forall (f : Tpos -> realU) (Hc : forall e, correctR (f e))
       (Hf : forall d e : Tpos, equivU ((d:T)+(e:T))),
       (forall d e, correctEq (f d) (f e) (Hf d e)) -> correctR (limU f Hf)
 
@@ -106,6 +106,7 @@ Proof.
 intros f Hf.
 exists (limU (fun e => (f e).1) (fun d e => (Hf d e).1)).
 constructor.
+intros;apply projT2.
 intros. apply ((Hf d e).2).
 Defined.
 
@@ -162,20 +163,53 @@ Axiom eqr : forall {x y : real}, (forall e : Tpos, equiv e x y) -> x=y.
 Axiom eqequiv : forall e x y (u v : equiv e x y), u=v.
 
 
+Fixpoint real_rectU (A : real -> Type) (frat : forall q, A (rat q))
+(flim : forall x (Hx : cauchyApprox x) (a : forall e, A (x e)), A (lim x Hx))
+(p : forall u v : real, forall (h : forall e : Tpos, equiv e u v),
+forall a : A u, forall b : A v, transport _ (eqr h) a = b)
+(x : realU) (Hx : correctR x) : A (x;Hx) :=
+match Hx as Hx0 in (correctR x0) return _ -> (A (x0;Hx0)) with
+  | co_rat q => fun _ => frat q
+  | co_lim f fc Hf Hfc => fun p => flim (fun e => (f e; fc e))
+                               (fun d e => (Hf d e ; Hfc d e)) 
+                               (fun e => real_rectU A frat flim p (f e) (fc e))
+  end p.
+
+Definition real_rect (A : real -> Type) (frat : forall q, A (rat q))
+(flim : forall x (Hx : cauchyApprox x) (a : forall e, A (x e)), A (lim x Hx))
+(p : forall u v : real, forall (h : forall e : Tpos, equiv e u v),
+forall a : A u, forall b : A v, transport _ (eqr h) a = b)
+(X : real) : A X := match X with
+  | existT x Hx => real_rectU A frat flim p x Hx
+  end.
+
+Lemma real_rect_rat : forall A frat flim p q,
+real_rect A frat flim p (rat q) = frat q.
+Proof.
+intros;reflexivity.
+Defined.
+
+Lemma real_rect_lim : forall A frat flim p x Hx,
+real_rect A frat flim p (lim x Hx) = flim x Hx
+   (fun e => real_rect A frat flim p (x e)).
+Proof.
+intros;simpl.
+
+Defined.
+
 Axiom ADMIT : forall {P : Type}, P.
 
-Section Rect0.
 
-Variables (A : realU -> Type) (B : forall x, A x -> forall y, A y ->
-      forall e, equivU e -> Type).
 
-Fixpoint R_rect (r : realU) : A r := ADMIT
+Definition real_rect (A : real -> Type) (frat : forall q, A (rat q))
+(flim : forall x (Hx : cauchyApprox x) (a : forall e, A (x e)), A (lim x Hx))
+(p : forall u v : real, forall (h : forall e : Tpos, equiv e u v),
+forall a : A u, forall b : A v, transport _ (eqr h) a = b)
+(X : real) : A X.
+Proof.
+destruct X as [x Hx].
 
-with E_rect x y e (He : equivU e) : B x (R_rect r) y (R_rect y) e He
- := ADMIT.
-
-End Rect0.
-
+Defined.
 
 
 Section Rect.
