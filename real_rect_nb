@@ -1,0 +1,47 @@
+
+(* TYPE A *)
+Inductive gA : forall {x Hx}, A (x;Hx) -> Type :=
+  | gA_rat : forall q, gA (frat q)
+  | ga_lim : forall ???, gA (flim ??)
+
+with gB : forall ???, B ??? -> Type :=
+  | gB_rat_rat : ??? -> gB (Hrat_rat ???)
+  etc
+.
+
+(* USE: *)
+Fixpoint real_rect0 x Hx : exists a : A (x;Hx), gA a := ...
+with equiv_rect0 x ax (gax : gA ax) : exists b, gB ... b := ...
+
+(* then *)
+Definition real_rect x := unpack_sigma (real_rect0 x.1 x.2).
+Definition equiv_rect ... := ...
+
+(* TYPE B *)
+Inductive gA : forall {x} (Hx : correctR x), Type :=
+  | gA_rat : forall q, gA (co_rat q)
+  | gA_lim : forall ???, gA (lim ??)
+
+with gB : forall ???, Type :=
+  | gB_rat_rat : ??? -> gB ??
+  etc
+.
+
+(* type B includes: *)
+Fixpoint gA_to_A x Hx (a : gA Hx) : A (x;Hx) := match a with
+  | gA_rat q => frat q
+  | ... => ...
+  end
+
+with gB_to_B ??? : B ??? := match ?? with
+  | ... => ...
+  end
+
+(* USE: *)
+Fixpoint real_rect0 x Hx : gA Hx := ...
+with equiv_rect0 x (ax : gA x) ... : gB ... := ...
+
+(* then *)
+Definition real_rect x := unpack_sigma (gA_to_A (real_rect0 x.1 x.2)).
+Definition equiv_rect ... := ...
+
