@@ -564,8 +564,73 @@ Defined.
 
 End Rect.
 
+Section AltRect.
+
+Variables (A : real -> Type) (B : forall x, A x -> forall y, A y ->
+    forall e, equiv e x y -> Type).
+
+Definition depCauchy x (Hx : cauchyApprox x)
+ (a : forall e, A (x e)) := forall d e : Tpos,
+     B (x d) (a d) (x e) (a e) ((d:T)+(e:T)) (Hx d e).
+
+Variables (frat : forall q : T, A (rat q))
+(flim : forall x (Hx : cauchyApprox x) a (Ha : depCauchy x Hx a),
+     A (lim x Hx)).
+
+Variable Heqr : forall (u v : real) (He : forall e : Tpos, equiv e u v)
+   (a : A u) (b : A v) (He' : forall e : Tpos, B u a v b e (He e)),
+      transport A (eqr He) a = b.
+
+Variable Hrat_rat : forall q r (e:Tpos) H H',
+    B (rat q) (frat q) (rat r) (frat r) e (rat_rat q r e H H').
+
+Variable Hrat_lim : forall (q : T) y (Hy : cauchyApprox y)
+ b (Hb : depCauchy y Hy b) (d e : Tpos) 
+  (He : equiv ((e:T)+(roppV (d:T))) (rat q) (y d)),
+    B (rat q) (frat q) (y d) (b d) ((e:T)+(roppV (d:T))) He ->
+      B (rat q) (frat q) (lim y Hy) (flim y Hy b Hb) e (rat_lim q y Hy _ _ He).
+
+Variable Hlim_rat : forall x (Hx : cauchyApprox x) a (Ha : depCauchy x Hx a)
+  (r : T) (d e : Tpos)
+    (He : equiv ((e:T)+(roppV (d:T))) (x d) (rat r)),
+      B (x d) (a d) (rat r) (frat r) _ He ->
+        B (lim x Hx) (flim x Hx a Ha) (rat r) (frat r) e (lim_rat x Hx r _ _ He).
+
+Variable Hlim_lim : forall x (Hx : cauchyApprox x) a (Ha : depCauchy x Hx a)
+y (Hy : cauchyApprox y) b (Hb: depCauchy y Hy b) (e d n : Tpos)
+    (He : equiv ((e:T)+(roppV ((d:T)+(n:T)))) (x d) (y n)),
+      B (x d) (a d) (y n) (b n) _ He ->
+        B (lim x Hx) (flim x Hx a Ha) (lim y Hy) (flim y Hy b Hb) e
+                   (lim_lim x Hx y Hy _ _ _ He).
+
+Variable Heqequiv : forall (e : Tpos) (x y : real)
+(eq eq' : equiv e x y) (a : A x) (b : A y)
+(u : B x a y b e eq) (v : B x a y b e eq'),
+  transport _ (eqequiv e x y _ _) u = v.
+
+Let B' : forall (e : T) (x y : real) (He : equiv e x y), Type
+ := fun e x y He => forall ax ay, B x ax y ay e He.
+
+(* NOPE *)
+Definition real_altrect : forall x, A x.
+Proof.
+apply (real_rect A B');unfold B';clear B'.
+- apply frat.
+- clear Hlim_lim Hlim_rat Hrat_lim Hrat_rat frat.
+  clear Heqr Heqequiv. (* might want to remove this line later *)
+  unfold depCauchy in flim.
+  intros ? ax ? IH. apply flim with ax.
+  auto.
+
+- clear flim Hrat_lim Hlim_rat Hlim_lim.
+  intros.
+  Fail apply Hrat_rat.
+Abort.
 
 
+
+
+End AltRect.
 
 End VarSec.
 
