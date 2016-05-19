@@ -1,6 +1,7 @@
 
 Require Import Overture.
-Require Import hit.minus1Trunc.
+Require Import HoTT.Basics.
+Require Import hit.Truncations.
 
 Open Scope path_scope.
 Open Scope equiv_scope.
@@ -38,8 +39,8 @@ Infix "<=" := leq.
 Notation "(<=)" := leq (only parsing).
 Infix "<"  := lt.
 Notation "(<)" := lt (only parsing).
-Infix "<>" := apart.
-Notation "(<>)" := apart (only parsing).
+Infix "#" := apart.
+Notation "(#)" := apart (only parsing).
 Infix "!=" := neq (at level 70, no associativity). (*same as <> *)
 Notation "(!=)" := neq (only parsing).
 
@@ -263,9 +264,9 @@ Instance prefieldApart : forall {T}, Prefield T -> Apart T := @preringrel_rel.
 Coercion prefieldApart : Prefield >-> Apart.
 
 Instance prefield_plusapart : forall {T}, Prefield T -> PlusApart T
- := fun T L => BuildLR_Class T (+) (<>).
+ := fun T L => BuildLR_Class T (+) (#).
 Instance prefield_multapart : forall {T}, Prefield T -> MultApart T
- := fun T L => BuildLR_Class T (°) (<>).
+ := fun T L => BuildLR_Class T (°) (#).
 Coercion prefield_plusapart : Prefield >-> PlusApart.
 Coercion prefield_multapart : Prefield >-> MultApart.
 
@@ -552,7 +553,7 @@ Coercion order_antisymm : Poset >-> Antisymmetric.
 (*NB: do not use < here, it becomes ambiguous when used with an apartness relation*)
 Class Cotransitive {T} (R : Rel T) := 
  iscotransitive : forall x y : T, rrel x y -> forall z,
-   minus1Trunc (rrel x z \/ rrel z y).
+   hor (rrel x z) (rrel z y).
 
 Class Apartness {T} (R : Apart T) := BuildApartness {
 apart_irrefl :> Irreflexive apart;
@@ -569,7 +570,7 @@ Class TrivialApart {T} (R : Apart T) := trivialapart
  : forall x y : T, x<>y <-> x!=y.
 
 Class Linear {T} (R : Leq T) := 
- islinear : forall x y : T, minus1Trunc (x <= y \/ y <= x).
+ islinear : forall x y : T, hor (x <= y) (y <= x).
 
 Class ConstrLinear {T} (R : Leq T) := 
  isconstrlinear : forall x y : T, x <= y \/ y <= x.
@@ -741,7 +742,7 @@ Class IsBinMorphism {T1} (R1 : Rel T1) {T2} (R2 : Rel T2) {T'} (R' : Rel T')
 Class IsBinReflecting {T1} (R1 : Rel T1) {T2} (R2 : Rel T2) {T'} (R' : Rel T')
   (f : T1 -> T2 -> T') := isbinreflecting
  : forall x x' y y', rrel (f x y) (f x' y')
-   -> minus1Trunc (rrel x x' \/ rrel y y').
+   -> hor (rrel x x') (rrel y y').
 
 End Relation.
 
@@ -854,7 +855,7 @@ Coercion integral_ring : IsIntegralDomain >-> IsRing.
 
 Class IsStrictIntegral {Hg : IsSemiring}
  := isstrictintegral : forall a b : G, ZeroV = a°b
-   -> minus1Trunc (ZeroV=a \/ ZeroV=b).
+   -> hor (ZeroV=a) (ZeroV=b).
 
 End Prering.
 

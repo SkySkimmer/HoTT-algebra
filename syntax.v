@@ -57,8 +57,8 @@ apply ap. apply IHl.
 apply someOp_assoc.
 Defined.
 
-Lemma NEList_eq_dec : decidable_paths A ->
- decidable_paths (NEList A).
+Lemma NEList_eq_dec : DecidablePaths A ->
+ DecidablePaths (NEList A).
 Proof.
 red. intros Ha.
 induction x;destruct y.
@@ -145,8 +145,8 @@ forall l l' : NEList A, Bool.
 Proof.
 intros ? ? l;induction l as [x | x l];intro l';destruct l' as [y | y l'].
 - (* [x] < [y] *) exact (order_dec x y).
-- (* [x] < y::l', l' <> [] *) exact (negb (order_dec y x)).
-- (* x::l < [y], l <> [] *) exact (negb (order_dec x y)).
+- (* [x] < y::l', l' # [] *) exact (negb (order_dec y x)).
+- (* x::l < [y], l # [] *) exact (negb (order_dec x y)).
 - (* x::l < y::l', IHl is l < _ *) exact (orb (order_dec x y)
                              (andb (negb (order_dec y x)) (IHl l'))).
 Defined.

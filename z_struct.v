@@ -9,8 +9,8 @@ Require Import hit.unique_choice.
 
 Import Distributive.
 
-Lemma prod_eq_dec : forall A (Ha : decidable_paths A) B (Hb : decidable_paths B),
-decidable_paths (A*B).
+Lemma prod_eq_dec : forall A (Ha : DecidablePaths A) B (Hb : DecidablePaths B),
+DecidablePaths (A*B).
 Proof.
 intros.
 intros [a b] [c d].
@@ -282,7 +282,7 @@ Defined.
 
 *)
 
-Definition eq_z_dec : decidable_paths Z.
+Definition eq_z_dec : DecidablePaths Z.
 Proof.
 red.
 assert (forall x y : Z, IsHProp ((x=y) \/ ~ x=y)).
@@ -311,8 +311,8 @@ apply repr_quotRel.
 Defined.
 
 
-Lemma zApart_repr : forall x y, zIn x <> zIn y ->
- quotRelU (+ <>) x y.
+Lemma zApart_repr : forall x y, zIn x # zIn y ->
+ quotRelU (+ #) x y.
 Proof.
 apply quotRel_repr;try apply _.
 red;red. unfold rrel;unfold gop;simpl.
@@ -322,15 +322,15 @@ red;red. unfold rrel;unfold gop;simpl.
 intros z x y H H'. apply H. destruct H'. reflexivity.
 Defined.
 
-Global Instance zApart_prop : @RelationProp Z (<>).
+Global Instance zApart_prop : @RelationProp Z (#).
 Proof.
 red;apply _.
 Defined.
 
-Global Instance zApart_trivial : @TrivialApart Z (<>).
+Global Instance zApart_trivial : @TrivialApart Z (#).
 Proof.
 red.
-assert (forall x y : Z, x<>y -> x!=y).
+assert (forall x y : Z, x#y -> x!=y).
 apply (z_ind (fun x => forall y, _ -> _) _).
 intros a b. apply (z_ind (fun y => _->_) _).
 intros c d.
@@ -341,7 +341,7 @@ intro H'.
 apply z_classes_eq_related in H'. red in H';red in H';simpl in H'.
 auto.
 
-assert (forall x y : Z, x!=y -> x<>y).
+assert (forall x y : Z, x!=y -> x#y).
 apply (z_ind (fun x => forall y, _ -> _) _).
 intros a b;apply (z_ind (fun y => _ -> _) _).
 intros c d.
@@ -381,7 +381,7 @@ Proof.
 apply repr_quotRel.
 Defined.
 
-Global Instance zApart_dec : @Decidable Z (<>).
+Global Instance zApart_dec : @Decidable Z (#).
 Proof.
 intros x y.
 destruct (eq_z_dec x y).
@@ -533,7 +533,7 @@ path_via (x+0). apply inverse;apply nplus_0_r.
 path_via (y+0). apply nplus_0_r.
 Defined.
 
-Global Instance zNat_neq_embedding : IsEmbedding (<>) (<>) zNat.
+Global Instance zNat_neq_embedding : IsEmbedding (#) (#) zNat.
 Proof.
 split;red;unfold rrel.
 intros. apply zApart_trivial. intro H.
@@ -649,7 +649,7 @@ etransitivity. apply H.
 apply nplus_0_r.
 Defined.
 
-Lemma z0_z1_apart : z0 <> z1.
+Lemma z0_z1_apart : z0 # z1.
 Proof.
 apply repr_quotRel.
 red;simpl. unfold rrel.

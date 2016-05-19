@@ -20,7 +20,7 @@ Context {G : Type}.
 Variable L : Prering G.
 Context {Hg : IsRing L}.
 
-Hypothesis Hdec : decidable_paths G.
+Hypothesis Hdec : DecidablePaths G.
 Let Hset : IsHSet G := hset_decidable Hdec.
 Existing Instance Hset.
 Context {Hint : IsStrictIntegral L}.
@@ -30,7 +30,7 @@ Hypothesis Hneq : ZeroV != OneV.
 a fraction is a/b with a,b in G
 
 fraction equivalence:
-if b,d<>0 and ad=bc then a/b == c/d
+if b,d#0 and ad=bc then a/b == c/d
 forall a d, a/0 = 0/d and 0/a = d/0
 *)
 
@@ -394,7 +394,7 @@ Defined.
 
 Instance frac_isring : IsRing fracPrering := easyIsRing _ _ _ _.
 
-Lemma frac_dec : decidable_paths fracQuot.
+Lemma frac_dec : DecidablePaths fracQuot.
 Proof.
 red.
 assert (Hprop : forall x y : fracQuot, IsHProp ((x=y) \/ (x != y))).

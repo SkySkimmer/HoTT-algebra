@@ -41,7 +41,7 @@ intros. exact (transport (fun s => match s with
   | 0 => Empty | _ => Unit end) H tt).
 Defined.
 
-Definition eq_nat_dec : decidable_paths nat.
+Definition eq_nat_dec : DecidablePaths nat.
 Proof.
 red.
 induction x,y.

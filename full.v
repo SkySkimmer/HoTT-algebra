@@ -13,7 +13,7 @@ Section VarSec.
 
 Context {T : Type}.
 Variable L : PreringFull T.
-Context {Hset : IsHSet T} {Hpr1 : RelationProp (<>)}
+Context {Hset : IsHSet T} {Hpr1 : RelationProp (#)}
 {Hpr2 : RelationProp (<=)} {Hpr3 : RelationProp (<)}.
 Context {Hl : IsFullDecField L}.
 Context {Hdec : @Decidable T paths}.
@@ -58,7 +58,7 @@ intros. apply Hl.
 red. apply Hl. assumption.
 Defined.
 
-Global Instance plus_apart_invariant : IsInvariant (+ <>).
+Global Instance plus_apart_invariant : IsInvariant (+ #).
 Proof.
 apply linvariant_invariant. apply _.
 intros z x y. unfold rrel,gop. simpl. intros.
@@ -112,7 +112,7 @@ simpl in H. unfold rrel in H.
 change goppV with roppV in H. apply H. apply plus_lt_invariant.
 Defined.
 
-Lemma ropp_apart_flip : forall a b, a <> b -> roppV b <> roppV a.
+Lemma ropp_apart_flip : forall a b, a # b -> roppV b # roppV a.
 Proof.
 intros. apply (@apart_iff_total_lt T L _).
 apply (@apart_iff_total_lt T L _) in X.
@@ -153,7 +153,7 @@ Proof.
 apply Hl.
 Defined.
 
-Lemma not_lt_apart_lt_flip : forall {x y : T}, ~ x < y -> x <> y -> y < x.
+Lemma not_lt_apart_lt_flip : forall {x y : T}, ~ x < y -> x # y -> y < x.
 Proof.
 intros. apply (@apart_iff_total_lt T L _) in X0.
 destruct X0;auto. destruct X;auto.
@@ -161,38 +161,38 @@ Defined.
 
 Global Instance pospreserving : IsPosPreserving (+ ° <):= _.
 
-Lemma mult_apart_embed : forall z, ZeroV <> z ->
-IsEmbedding (<>) (<>) (mult z).
+Lemma mult_apart_embed : forall z, ZeroV # z ->
+IsEmbedding (#) (#) (mult z).
 Proof.
 intros z Hz;split.
 - hnf;unfold rrel. intros.
-  assert (Hb : IsBinRegular (° <>)). apply _.
+  assert (Hb : IsBinRegular (° #)). apply _.
   hnf in Hb. unfold rrel,gop in Hb. simpl in Hb.
-  assert (dec_inv z ° (z°x) <> dec_inv z ° (z°y)).
+  assert (dec_inv z ° (z°x) # dec_inv z ° (z°y)).
   pattern (dec_inv z ° (z°x)). apply transport with x.
   path_via ((dec_inv z ° z) ° x). apply inverse. apply dec_inv_ok.
-  intros H;destruct H;apply (@irrefl T (<>)) in Hz. assumption.
+  intros H;destruct H;apply (@irrefl T (#)) in Hz. assumption.
   apply Hl.
   apply inverse. apply associative. apply Hl.
   apply transport with y.
   path_via ((dec_inv z ° z) ° y). apply inverse. apply dec_inv_ok.
-  intros H;destruct H;apply (@irrefl T (<>)) in Hz. assumption.
+  intros H;destruct H;apply (@irrefl T (#)) in Hz. assumption.
   apply Hl.
   apply inverse. apply associative. apply Hl.
   assumption.
   apply Hb in X0. clear Hb. revert X0.
   apply minus1Trunc_rect_nondep;[|apply Hpr1].
   intros. destruct X0 as [H|H].
-  apply (@irrefl T (<>) Hl) in H. destruct H.
+  apply (@irrefl T (#) Hl) in H. destruct H.
   assumption.
 - hnf. unfold rrel.
   intros.
-  assert (Hb : IsBinRegular (° <>)). apply _.
+  assert (Hb : IsBinRegular (° #)). apply _.
   apply Hb in X.
   clear Hb;revert X.
   apply minus1Trunc_rect_nondep;[|apply Hpr1].
   unfold rrel. simpl. intros [H|H].
-  apply (@irrefl T (<>) Hl) in H. destruct H.
+  apply (@irrefl T (#) Hl) in H. destruct H.
   assumption.
 Defined.
 
@@ -391,14 +391,14 @@ apply nat_embed_lt in H;unfold rrel in H;destruct X;
 apply (@irrefl T (<) _) in H;destruct H.
 Defined.
 
-Global Instance nat_embed_apart : IsEmbedding (<>) (<>) (nat_embed L).
+Global Instance nat_embed_apart : IsEmbedding (#) (#) (nat_embed L).
 Proof.
 split;red;unfold rrel.
 intros. apply (@apart_iff_total_lt T L _).
 destruct (nat_trichotomic x y) as [H|[H|H]];[left|destruct X;assumption|right];
 apply nat_embed_lt;assumption.
 
-intros. intro H. destruct H. apply (@irrefl T (<>) Hl) in X. assumption.
+intros. intro H. destruct H. apply (@irrefl T (#) Hl) in X. assumption.
 Defined.
 
 Global Instance nat_embed_leq : IsEmbedding (<=) (<=) (nat_embed L).

@@ -13,14 +13,14 @@ Section VarSec.
 Context {T : Type}.
 Variable L : FullRelation T.
 
-Lemma leqdec_eqdec {Hpo : Poset (<=)} : Decidable (<=) -> decidable_paths T.
+Lemma leqdec_eqdec {Hpo : Poset (<=)} : Decidable (<=) -> DecidablePaths T.
 Proof.
 intros H x y.
 destruct (H x y);[destruct (H y x);[left;apply antisymmetric;assumption|]|];
 right;intros p;destruct p;apply n;apply @reflexivity;apply Hpo.
 Defined.
 
-Global Instance leqdec_ltdec {Htr : TrivialApart (<>)} {Hpo : FullPoset L}
+Global Instance leqdec_ltdec {Htr : TrivialApart (#)} {Hpo : FullPoset L}
  : Decidable (<=) -> Decidable (<).
 Proof.
 intros Hdec x y.
@@ -34,8 +34,8 @@ right;intro H';apply lt_iff_le_apart in H';destruct H';auto.
 Defined.
 
 (* we use neq_apart more often but this justifies that neq is the only apartness on decidable sets *)
-Global Instance apartdec_trivial {Hap : Apartness (<>)} {Hdec : Decidable (<>)}
- : TrivialApart (<>).
+Global Instance apartdec_trivial {Hap : Apartness (#)} {Hdec : Decidable (#)}
+ : TrivialApart (#).
 Proof.
 red. intros. split.
 intros H H'.
@@ -46,7 +46,7 @@ destruct H. apply Hap. assumption.
 Defined.
 
 Lemma linear_dec_trichotomic {Hdec : Decidable (<=)} 
-{Htr : TrivialApart (<>)} {Hlin : ConstrLinear (<=)}
+{Htr : TrivialApart (#)} {Hlin : ConstrLinear (<=)}
 {Hfull : FullPoset L} : Trichotomic (<).
 Proof.
 intros x y.
