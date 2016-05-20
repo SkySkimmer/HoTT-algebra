@@ -41,7 +41,7 @@ Infix "<"  := lt.
 Notation "(<)" := lt (only parsing).
 Infix "#" := apart.
 Notation "(#)" := apart (only parsing).
-Infix "!=" := neq (at level 70, no associativity). (*same as <> *)
+Infix "!=" := neq (at level 70, no associativity). (*same as # *)
 Notation "(!=)" := neq (only parsing).
 
 End Symbols.
@@ -85,7 +85,7 @@ Instance apartlt_lt : forall {T}, ApartLt T -> Lt T := RR_R2.
 Coercion apartlt_apart : ApartLt >-> Apart.
 Coercion apartlt_lt : ApartLt >-> Lt.
 
-Notation "(<> <)" := apartlt (only parsing).
+Notation "(# <)" := apartlt (only parsing).
 
 Class LeqLt T := leqlt : RR_Class T.
 
@@ -98,7 +98,7 @@ Coercion leqlt_lt : LeqLt >-> Lt.
 
 Class ApartLeq T := apartleq : RR_Class T.
 
-Notation "(<> <=)" := apartleq.
+Notation "(# <=)" := apartleq.
 
 Instance apartleq_apart : forall {T}, ApartLeq T -> Apart T := RR_R1.
 Instance apartleq_leq : forall {T}, ApartLeq T -> Leq T := RR_R2.
@@ -119,7 +119,7 @@ RRR_R3 : relation T
 
 Class FullRelation T := fullrelation : RRR_Class T.
 
-Notation "(<> <= <)" := fullrelation (only parsing).
+Notation "(# <= <)" := fullrelation (only parsing).
 
 Instance fullrel_apartlt {T} (R : FullRelation T) : ApartLt T
  := BuildRR_Class T (RRR_R1 T R) (RRR_R3 T R).
@@ -165,7 +165,7 @@ Coercion multrel : MultRel >-> OpRel.
 
 Class OpApart T := opapart :> OpRel T.
 
-Notation "(& <>)" := opapart (only parsing).
+Notation "(& #)" := opapart (only parsing).
 
 Instance opapart_apart : forall {T}, OpApart T -> Apart T := @oprel_rel.
 Coercion opapart_apart : OpApart >-> Apart.
@@ -190,7 +190,7 @@ Coercion oplt : OpLt >-> OpRel.
 
 Class PlusApart T := plusapart :> PlusRel T.
 
-Notation "(+ <>)" := plusapart (only parsing).
+Notation "(+ #)" := plusapart (only parsing).
 
 Instance plusapart_opapart {T} : PlusApart T -> OpApart T := idmap.
 Coercion plusapart_opapart : PlusApart >-> OpApart.
@@ -198,7 +198,7 @@ Coercion plusapart : PlusApart >-> PlusRel.
 
 Class MultApart T := multapart : MultRel T.
 
-Notation "(° <>)" := multapart (only parsing).
+Notation "(° #)" := multapart (only parsing).
 
 Instance multapart_opapart {T} : MultApart T -> OpApart T := idmap.
 Coercion multapart_opapart : MultApart >-> OpApart.
@@ -251,7 +251,7 @@ Notation "(+ ° ~>)" := preringrel (only parsing).
 
 Class Prefield T := prefield :> PreringRel T.
 Coercion prefield : Prefield >-> PreringRel.
-Notation "(+ ° <>)" := prefield (only parsing).
+Notation "(+ ° #)" := prefield (only parsing).
 
 Instance preringrel_prering {T} (G : PreringRel T) : Prering T :=
 BuildLL_Class _ (LLR_L1 _ G) (LLR_L2 _ G).
@@ -314,7 +314,7 @@ LLRR_R2 : relation T
 }.
 
 Class PreringStrict T := preringstrict : LLRR_Class T.
-Notation "(+ ° <> <)" := preringstrict (only parsing).
+Notation "(+ ° # <)" := preringstrict (only parsing).
 
 Instance preringstrict_prefield : forall {T}, PreringStrict T -> Prefield T
  := fun T G => BuildLLR_Class T (LLRR_L1 T G) (LLRR_L2 T G) (LLRR_R1 T G).
@@ -345,7 +345,7 @@ LLRRR_R3 : relation T
 }.
 
 Class PreringFull T := preringfull : LLRRR_Class T.
-Notation "(+ ° <> <= <)" := preringfull (only parsing).
+Notation "(+ ° # <= <)" := preringfull (only parsing).
 
 Instance preringfull_fullrel : forall {T}, PreringFull T -> FullRelation T
  := fun T G => BuildRRR_Class T (LLRRR_R1 T G) (LLRRR_R2 T G) (LLRRR_R3 T G).
@@ -559,7 +559,7 @@ Class Apartness {T} (R : Apart T) := BuildApartness {
 apart_irrefl :> Irreflexive apart;
 apart_symm :> Symmetric apart;
 apart_cotrans :> Cotransitive apart;
-apart_tight : forall x y : T, ~ x <> y -> x=y
+apart_tight : forall x y : T, ~ x # y -> x=y
 }.
 
 Coercion apart_irrefl : Apartness >-> Irreflexive.
@@ -567,7 +567,7 @@ Coercion apart_symm : Apartness >-> Symmetric.
 Coercion apart_cotrans : Apartness >-> Cotransitive.
 
 Class TrivialApart {T} (R : Apart T) := trivialapart
- : forall x y : T, x<>y <-> x!=y.
+ : forall x y : T, x#y <-> x!=y.
 
 Class Linear {T} (R : Leq T) := 
  islinear : forall x y : T, hor (x <= y) (y <= x).
@@ -582,7 +582,7 @@ Class Trichotomic {T} (R : Lt T) := trichotomic
  : forall x y : T, x<y \/ x=y \/ y<x.
 
 Class Decidable {T} (R : Rel T) := 
- decidable : forall x y : T, (rrel x y)+(~rrel x y).
+ decidable : forall x y : T, ((rrel x y)+(~rrel x y))%type.
 
 Class StrictOrder {T} (R : Lt T) := BuildStrictOrder {
 strictorder_irrefl :> Irreflexive lt;
@@ -692,7 +692,7 @@ Coercion constrtotalorder_linear : ConstrTotalOrder >-> ConstrLinear.
 
 
 (*
-In classical logic we can construct a strict order from a poset (resp poset from strict order) by taking x<y iff x<=y and x<>y (resp x<=y if x<y or x=y)
+In classical logic we can construct a strict order from a poset (resp poset from strict order) by taking x<y iff x<=y and x#y (resp x<=y if x<y or x=y)
 In constructive logic the inequality becomes apartness and the two iffs are not equivalent (2nd is stronger from its \/)
 We end up using the first one.
 cf math classes for working example (src/interfaces/orders.v > FullPartialOrder)
@@ -702,7 +702,7 @@ Class PseudoOrder {T} (R : ApartLt T) := BuildPseudoOrder {
 pseudoorder_apart :> Apartness R;
 pseudoorder_antisym : forall x y : T, x<y -> y<x -> Empty;
 pseudoorder_cotrans :> Cotransitive lt;
-apart_iff_total_lt : forall x y : T, x <> y <-> (x<y \/ y<x)
+apart_iff_total_lt : forall x y : T, x # y <-> (x<y \/ y<x)
 }.
 Coercion pseudoorder_apart : PseudoOrder >-> Apartness.
 Coercion pseudoorder_cotrans : PseudoOrder >-> Cotransitive.
@@ -711,7 +711,7 @@ Class FullPoset {T} (R : FullRelation T) := BuildFullPartialOrder {
 fullpartial_apart :> Apartness R;
 fullpartial_poset :> Poset R;
 fullpartial_trans :> Transitive lt;
-lt_iff_le_apart : forall x y : T, x < y <-> (x <= y /\ x <> y)
+lt_iff_le_apart : forall x y : T, x < y <-> (x <= y /\ x # y)
 }.
 Coercion fullpartial_apart : FullPoset >-> Apartness.
 Coercion fullpartial_poset : FullPoset >-> Poset.
@@ -941,17 +941,17 @@ Coercion decfield_is_ring : IsDecField >-> IsRing.
 Class IsField {F} (L : Prefield F) := BuildIsField {
 field_is_apart :> Apartness L;
 field_is_ring :> IsRing L;
-field_add :> IsBinRegular (+ <>);
-field_mult :> IsBinRegular (° <>);
+field_add :> IsBinRegular (+ #);
+field_mult :> IsBinRegular (° #);
 field_neq : @apart F _ ZeroV OneV;
-finv : forall x : F, ZeroV <> x -> Inverse (°) x;
-field_inv_neq : forall x, Inverse (°) x -> ZeroV <> x
+finv : forall x : F, ZeroV # x -> Inverse (°) x;
+field_inv_neq : forall x, Inverse (°) x -> ZeroV # x
 }.
 
 Definition finvV {F} {L : Prefield F} {Hf : IsField L}
- : forall x : F, ZeroV <> x -> F := fun x H => inverse_val (finv x H).
+ : forall x : F, ZeroV # x -> F := fun x H => inverse_val (finv x H).
 Instance finvP {F} {L : Prefield F} {Hf : IsField L}
- : forall (x : F) (H :ZeroV <> x), IsInverse (°) x (finvV x H) := _.
+ : forall (x : F) (H :ZeroV # x), IsInverse (°) x (finvV x H) := _.
 
 End Field.
 
@@ -989,7 +989,7 @@ pseudo_srorder_strict :> PseudoOrder L;
 pseudo_srorder_partial_minus : forall x y : G, ~y < x -> exists z, y = x + z;
 pseudo_srorder_plus :> forall z : G,
         IsEmbedding (<) (<) (plus z);
-pseudo_srorder_mult_ext :> IsBinRegular (° <>);
+pseudo_srorder_mult_ext :> IsBinRegular (° #);
 pseudo_srorder_pos_mult_compat :> IsPosPreserving' (+ ° <)
 }.
 Coercion pseudo_srorder_strict : IsPseudoSemiringOrder >-> PseudoOrder.

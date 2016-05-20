@@ -278,7 +278,7 @@ Instance gid_isinverse : forall {G} {L : Gop G} {Hg : IsMonoid L},
  IsInverse L gidV gidV.
 Proof.
 intros.
-split;red;(apply transport with gidV;[symmetry;apply gid|]);try apply _.
+split;red;(apply transport with gidV;[apply symmetry;apply gid|]);try apply _.
 Defined.
 
 Lemma gopp_gid : forall {G} {L : Gop G} {Hg : IsGroup L},
@@ -715,7 +715,7 @@ apply lt_iff_le_apart in H. destruct H as [H0 H1].
 apply lt_iff_le_apart. split.
 - eapply (@transitivity T (<=)). apply Hpo. apply H0. apply H'.
 - pose (H := apart_cotrans _ _ H1 z). clearbody H.
-  change (merely ((x#z) + (z#y)) : Type) in H.
+  change (merely ((x#z) + (z#y))%type : Type) in H.
   revert H. red in Hpr; apply Trunc_rec.
   intros [H|H]. assumption.
   apply lt_apart. apply (@symmetry T (#)) in H.
@@ -730,7 +730,7 @@ apply lt_iff_le_apart in H';apply lt_iff_le_apart.
 destruct H' as [H0 H1];split.
 - eapply @transitivity;[apply Hpo|apply H|apply H0].
 - pose (H' := apart_cotrans _ _ H1 x).
-  clearbody H'. change (merely ((y#x) + (x#z)) : Type) in H'. revert H'.
+  clearbody H'. change (merely ((y#x) + (x#z))%type : Type) in H'. revert H'.
   red in Hpr;apply Trunc_rec.
   intros [H' | H'];trivial.
   apply lt_apart.
@@ -761,7 +761,7 @@ split.
   apply pseudo_complement_trans; apply _.
 - intros x. apply le_iff_not_lt_flip.
   revert x. change (Irreflexive (<)). apply @strictorder_irrefl.
-  apply _.
+  apply (@pseudo_is_strict _ _ _ Hpo).
 - intros x y H H'.
   apply le_iff_not_lt_flip in H;apply le_iff_not_lt_flip in H'.
   apply (@pseudo_complement_antisym _ (# <) _);assumption.
@@ -771,14 +771,16 @@ Global Instance fullpseudo_is_fullposet : FullPoset r.
 Proof.
 split;try apply _.
 
-intros x y. split.
-intro H. split. apply le_iff_not_lt_flip.
-red. apply pseudoorder_antisym;assumption.
-apply apart_iff_total_lt. auto.
-intros [H0 H1].
-apply apart_iff_total_lt in H1. destruct H1.
-assumption.
-apply le_iff_not_lt_flip in H0. destruct H0;assumption.
+- apply (@pseudo_is_strict _ _ _ Hpo).
+
+- intros x y. split.
+  intro H. split. apply le_iff_not_lt_flip.
+  red. apply pseudoorder_antisym;assumption.
+  apply apart_iff_total_lt. auto.
+  intros [H0 H1].
+  apply apart_iff_total_lt in H1. destruct H1.
+  assumption.
+  apply le_iff_not_lt_flip in H0. destruct H0;assumption.
 Defined.
 
 (* since x<=y is ~y<x, the double negation is equivalent *)
@@ -1303,7 +1305,7 @@ End OrderedMagma_pr.
 
 Module Ring_pr.
 Export Ring Magma_pr.
-Import minus1Trunc.
+Import hit.Truncations.
 Generalizable Variable T.
 
 Instance distrib_prop : forall `{G : Prering T} {Hset : IsHSet T},
@@ -1339,7 +1341,7 @@ apply semiring_cancel with (ZeroV ° x).
 path_via ((ZeroV + ZeroV) ° x).
 symmetry. apply rdistributes. apply _.
 path_via (ZeroV ° x).
-apply (ap (fun g => g ° x)). apply Zero.
+apply (@ap _ _ (fun g => g ° x)). apply Zero.
 apply inverse;apply Zero.
 Defined.
 
@@ -1373,7 +1375,7 @@ Proof.
 intros ? ? ? ? ? H ?. apply linverse_inverse.
 red. apply transport with ZeroV;[|apply Zero]. symmetry; path_via ((x + y)°z).
 symmetry;apply rdistributes;apply _.
-path_via (ZeroV°z). apply (ap (fun g => g°z)).
+path_via (ZeroV°z). apply (@ap _ _ (fun g => g°z)).
 apply (id_unique (prering_plus G));[apply H | apply Zero].
 apply rmult_0_l.
 Defined.
@@ -1440,9 +1442,8 @@ Lemma strictintegral_integral_pr : forall `{G : Prering T} {Hg : IsSemiring G}
  forall b : T, neq ZeroV b -> neq ZeroV (a°b).
 Proof.
 intros ? ? ? ? ? Ha ? Hb H.
-apply Hr in H. revert H. apply minus1Trunc_rect_nondep.
+apply Hr in H. revert H. apply Trunc_rec.
 intros [H|H];auto.
-intros [].
 Defined.
 
 Lemma strictintegral_intdom : forall `(G : Prering T) {Hg : IsRing G}
@@ -1470,11 +1471,10 @@ eapply concat;[ apply ap | apply (@gidP _ (+) _)].
 eapply concat. symmetry.
 apply semiring_distributes;apply _.
 eapply concat;[apply ap | apply rmult_0_r].
-apply (@id_unique _ (+) _);try apply _.
-apply roppP.
+apply (@id_unique _ (+) _); apply _.
 
 apply inverse in X0;apply Hr in X0. revert X0.
-apply minus1Trunc_rect_nondep;[|apply Hset].
+apply Trunc_rec.
 intros [p | p].
 destruct H;auto.
 assert (Hcan : forall a, Rcancel (+) a). apply _.
@@ -1516,7 +1516,7 @@ End Ring_pr.
 
 Module RelatorInverse.
 Export Relation_pr OrderedMagma_pr.
-Import minus1Trunc.
+Import hit.Truncations.
 Generalizable Variable T.
 
 Definition inverseRel `(R : Rel T) : Rel T := fun x y => y ~> x.
@@ -1580,8 +1580,9 @@ Instance inverse_cotrans :  forall `(r : Rel T) {Hs : Cotransitive r},
  Cotransitive (r ^-1).
 Proof.
 intros;intros ? ? H ?.
-eapply minus1Trunc_rect_nondep;[|apply minus1Trunc_is_prop|apply Hs;apply H].
-intros [H'|H'];apply min1;[right|left];apply H'.
+generalize (Hs _ _ H z).
+apply Trunc_rec.
+intros [H'|H'];apply tr;[right|left];apply H'.
 Defined.
 
 Instance inverse_apart : forall `(r : Rel T) {Ha : Apartness r},
@@ -1936,7 +1937,7 @@ End Lattice_pr.
 
 Module Field_pr.
 Export Field Ring_pr Relation_pr.
-Import minus1Trunc.
+Import hit.Truncations.
 Generalizable Variable F.
 
 Lemma field_intdom_pr : forall `{L : Prefield F} {Hf : IsField L},
@@ -2005,12 +2006,12 @@ refine (BuildIsField _ _ _ decfield_is_ring _ _ _ _ _).
 - apply neq_apart. assumption.
   assumption.
 - intros ? ? ? ? H.
-  apply min1. destruct (Hdec x x');[destruct (Hdec y y')|].
+  apply tr. destruct (Hdec x x');[destruct (Hdec y y')|].
   apply Hneq in H. destruct H;apply ap11;[apply ap|];assumption.
   right;apply Hneq;assumption.
   left ;apply Hneq;assumption.
 - intros ? ? ? ? H.
-  apply min1. destruct (Hdec x x');[destruct (Hdec y y')|].
+  apply tr. destruct (Hdec x x');[destruct (Hdec y y')|].
   apply Hneq in H. destruct H;apply ap11;[apply ap|];assumption.
   right;apply Hneq;assumption.
   left ;apply Hneq;assumption.

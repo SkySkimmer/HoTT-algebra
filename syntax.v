@@ -1,6 +1,39 @@
 Require Import HoTT.
 Require Import structures.
 
+Local Open Scope list_scope.
+Notation "[]" := nil : list_scope.
+
+Module ListHelpers.
+
+Definition tl {A} (l:list A) :=
+  match l with
+    | nil => nil
+    | a :: m => m
+  end.
+
+Fixpoint onth {A : Type} (l:list A) (n:nat) {struct n} : option A :=
+  match n, l with
+    | O, x :: _ => Some x
+    | S n, _ :: l => onth l n
+    | _, _ => None
+  end.
+
+Definition nil_cons {A} {x:A} {l:list A} : [] <> x :: l  :=
+  fun eq =>
+    @paths_rec _ [] (fun l => match l with [] => _ | _ => _ end) tt _ eq.
+
+Lemma cons_inj {A} {x y : A} {l k} : x :: l = y :: k -> x = y /\ l = k.
+Proof.
+intro eq.
+split.
+- exact (ap (fun a => match a with [] => x | z :: _ => z end) eq).
+- exact (ap (fun a => match a with [] => [] | _ :: z => z end) eq).
+Defined.
+
+End ListHelpers.
+Import ListHelpers.
+
 Module NEList.
 Export Magma.
 
@@ -158,7 +191,7 @@ End NEList.
 Export NEList.
 
 Module BinOpTree.
-Import ListNotations.
+(*Import ListNotations.*)
 
 Inductive T (A : Type) : Type := 
   | Op : T A -> T A -> T A
@@ -175,8 +208,6 @@ Fixpoint evalTree {A} {G:Gop A} {B} (f : B -> option A) (t : T B) : option A :=
     end.
 
 Section Nota.
-
-Notation onth := nth_error.
 
 Fixpoint T2list {A} (t : T A) : (NEList A) :=
   match t with
@@ -223,8 +254,6 @@ Section Prefix.
 
 Context {A : Type}.
 
-Notation onth := nth_error.
-
 (* prefix stuff should be moved so that it may work for types not in magmas *)
 Inductive prefix : relation (list A) := 
   | pref_nil : forall l, prefix nil l
@@ -246,7 +275,7 @@ intros ? ? H;induction H.
   destruct (nil_cons H).
 - intros ? ? H0.
   apply cons_inj in H0.
-  destruct H0 as [[] []]. simpl. split;auto.
+  destruct H0 as [H0 H1]; destruct H0; destruct H1. simpl. split;auto.
 - intros. apply H with (x::l);auto.
 Defined.
 
@@ -258,7 +287,7 @@ induction H.
 - constructor.
 - intros l3 H'. apply cons_pref in H'. destruct H' as [H0 H1].
   destruct l3;simpl in *. destruct (nil_cons H0).
-  apply cons_inj in H0. destruct H0 as [[] _].
+  apply cons_inj in H0. destruct H0 as [H0 _]; destruct H0.
   constructor. auto.
 Defined.
 
@@ -271,7 +300,7 @@ Lemma prefix_app : forall l l', prefix l l' -> exists l0, l' = l++l0.
 Proof.
 induction 1 as [| ? ? ? IH].
 econstructor;reflexivity.
-destruct IH. econstructor. simpl; apply ap. apply p. 
+destruct IH as [? p]. econstructor. simpl; apply ap. apply p. 
 Defined.
 
 Lemma prefix_nth : forall l l', prefix l l' ->
@@ -301,8 +330,6 @@ Arguments prefix_trans {_ _ _ _} _ _.
 
 Section XFind.
 
-Notation onth := nth_error.
-
 Variable A : Type.
 
 Definition invariant s r i (e : A) := onth r i = Some e /\ prefix s r.
@@ -325,7 +352,7 @@ Structure xfind (s r : list A) (i : nat) := XFind {
   x_prefix :> prefix s r
 }.
 
-Implicit Arguments XFind [].
+(*Implicit Arguments XFind [].*)
 
 Canonical Structure found_struct x t := 
   XFind (x :: t) (x :: t) 0 (found_tag x) (idpath) (prefix_refl _).
@@ -341,7 +368,7 @@ Canonical Structure recurse_struct i y t r (f : xfind t r i) :=
   XFind (y :: t) (y :: r) (S i) (recurse_tag f) f (pref_cons _ _ f _).
 
 Canonical Structure extend_struct x := 
-  XFind [] [ x] 0 (extend_tag x) idpath (pref_nil _).
+  XFind [] (x :: []) 0 (extend_tag x) idpath (pref_nil _).
 
 End XFind.
 
@@ -352,8 +379,6 @@ Arguments xfind {_} _ _ _.
 Section Ast.
 
 Context {A : Type} {G : Gop A}.
-
-Notation onth := nth_error.
 
 Structure tagged := Tag { untag :> A }.
 
@@ -510,7 +535,6 @@ End BinOpTree.
 Module Distributive.
 Export BinOpTree.
 Export Ring.
-Import ListNotations.
 
 Inductive T2 : Type := 
   | Plus : T2 -> T2 -> T2
@@ -559,8 +583,6 @@ Fixpoint Flat2_order_in (t : Flat2) : Flat2 := match t with
 
 Section Mag2.
 
-Notation onth := nth_error.
-
 Context {A} {G : Prering A}.
 Context {Hadd : @IsSemigroup A (+)} {Hmult : @IsSemigroup A (°)}
  {Hdistrib : Distributes G}.
@@ -578,6 +600,8 @@ Proof.
 destruct a,b,c;try reflexivity.
 simpl. apply ap. apply Hdistrib.
 Defined.
+
+Local Open Scope type_scope.
 
 Lemma distribute_ok : forall (f : _ -> option A) t1 t2,
 evalFlat2 f (distribute t1 t2) = someMult (evalFlat2 f t1) (evalFlat2 f t2).
@@ -679,8 +703,6 @@ Context {A} {G : Prering A}.
 
 (*note: cannot reuse BinOpTree.tagged because its canonical projections would override our new ones *)
 Structure tagged := Tag { untag :> A }.
-
-Notation onth := nth_error.
 
 Lemma prefix_eval2 : forall c c', prefix c c' -> forall (t : T2) (v : A), 
 evalT2 (onth c) t = Some v -> evalT2 (onth c') t = Some v.
@@ -820,7 +842,7 @@ Lemma test2 : forall A (G : Prering A) {Hsemir : IsSemiring G},
 forall a b c : A, a°(b+c) = a°c + a°b.
 Proof.
 intros.
-ssrapply (@ast2_full_semiring A (+ °) Hsemir paths).
+refine (@ast2_full_semiring A (+ °) Hsemir paths _ _ _ _ _ _ _).
 reflexivity.
 Fail idtac.
 Abort.
