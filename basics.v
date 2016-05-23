@@ -792,6 +792,14 @@ Defined.
 
 End FullPseudoOrder.
 
+Import OrderedRing.
+
+Global Instance fullpseudosemi_fullpseudo T {L : PreringFull T} {Hpo : FullPseudoSemiringOrder L}
+ : FullPseudoOrder L.
+Proof.
+split;apply Hpo.
+Defined.
+
 (**TODO**)
 (*
 Instance maximum_is_supremum : forall r P m, 

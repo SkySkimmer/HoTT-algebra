@@ -842,7 +842,7 @@ Lemma test2 : forall A (G : Prering A) {Hsemir : IsSemiring G},
 forall a b c : A, a°(b+c) = a°c + a°b.
 Proof.
 intros.
-refine (@ast2_full_semiring A (+ °) Hsemir paths _ _ _ _ _ _ _).
+refine (@ast2_full_semiring A _ Hsemir paths _ _ _ _ _ _ _).
 reflexivity.
 Fail idtac.
 Abort.
