@@ -1,8 +1,6 @@
 #!/bin/sh
 
-coq_makefile *.v > Makefile
+coq_makefile COQC "=" hoqc COQDEP "=" hoqdep *.v -o Makefile
 
-export COQDEP=hoqdep
-export COQC=hoqc
 make "$@"
 
