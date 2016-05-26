@@ -1,0 +1,8 @@
+#!/bin/sh
+
+coq_makefile *.v > Makefile
+
+export COQDEP=hoqdep
+export COQC=hoqc
+make "$@"
+
