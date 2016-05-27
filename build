@@ -1,6 +1,6 @@
 #!/bin/sh
 
-coq_makefile COQC "=" hoqc COQDEP "=" hoqdep *.v -o Makefile
+coq_makefile COQC "=" hoqc COQDEP "=" hoqdep -R . HoTTMath *.v -o Makefile
 
 make "$@"
 
