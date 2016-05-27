@@ -17,6 +17,9 @@ Class Monoid A {i : Id A} {op : SgOp A} :=
 Class LeftCancels `{op : SgOp A} x := left_cancels : forall y z : A, x ++ y = x ++ z -> y = z.
 Class RightCancels `{op : SgOp A} x := right_cancels : forall y z : A, y ++ x = z ++ x -> y = z.
 
+Arguments left_cancels {_ _} _ {_ _ _} _.
+Arguments right_cancels {_ _} _ {_ _ _} _.
+
 Class Cancels `{op : SgOp A} x :=
   { cancels_left :> LeftCancels x
   ; cancels_right :> RightCancels x }.

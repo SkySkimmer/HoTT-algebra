@@ -61,12 +61,19 @@ Global Instance semiring_absorbs : Absorbs.
 Proof.
 split.
 - intros x.
-  apply (@left_cancels _ pl (0 * x)).
-  + apply S.
-  + path_via (0 * x).
-    path_via ((0 + 0) * x).
-    * apply symmetry. apply right_distributes.
-    * apply (ap (fun a => a * x)). apply (left_id (op:=plus_op) (i:=zero_id)).
+  apply (left_cancels (0 * x)).
+  path_via (0 * x).
+  path_via ((0 + 0) * x).
+  + apply symmetry. apply right_distributes.
+  + apply (ap (fun a => a * x)). apply (left_id (op:=plus_op) (i:=zero_id)).
+  + apply symmetry. apply (right_id (op:=plus) (i:=zero_id)).
+- intros x.
+  apply (left_cancels (x * 0)).
+  path_via (x * 0).
+  path_via (x * (0 + 0)).
+  + apply symmetry. apply left_distributes.
+  + apply ap. apply (left_id (op:=plus_op) (i:=zero_id)).
+  + apply symmetry. apply (right_id (op:=plus) (i:=zero_id)).
 Defined.
 
 End Properties.
