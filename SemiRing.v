@@ -39,17 +39,6 @@ Class Distributes :=
   { distributes_left :> LeftDistributes
   ; distributes_right :> RightDistributes }.
 
-Class SemiRing :=
-  { semiring_additive :> StrongMonoid A (i:=zero_id) (op:=plus_op) 
-  ; semiring_multiplicative :> Monoid A (i:=one_id) (op:=mult_op)
-  ; semiring_distributes :> Distributes }.
-
-End Definitions.
-
-Section Properties.
-
-Context `{S : SemiRing A}.
-
 Class LeftAbsorbs := left_absorbs : forall x, 0 * x = 0.
 Class RightAbsorbs := right_absorbs : forall x, x * 0 = 0.
 
@@ -57,8 +46,19 @@ Class Absorbs :=
   { absorbs_left :> LeftAbsorbs
   ; absorbs_right :> RightAbsorbs }.
 
-Global Instance semiring_absorbs : Absorbs.
+Class SemiRing :=
+  { semiring_additive :> Monoid A (i:=zero_id) (op:=plus_op) 
+  ; semiring_multiplicative :> Monoid A (i:=one_id) (op:=mult_op)
+  ; semiring_distributes :> Distributes
+  ; semiring_absorbs :> Absorbs }.
+
+Lemma semiring_from_cancelling
+  `(StrongMonoid A (i:=zero_id) (op:=plus_op))
+  `(Monoid A (i:=one_id) (op:=mult_op))
+  `(Distributes)
+  : SemiRing.
 Proof.
+split;try apply _.
 split.
 - intros x.
   apply (left_cancels (0 * x)).
@@ -80,5 +80,5 @@ split.
     apply (right_id (op:=plus) (i:=zero_id)).
 Defined.
 
-End Properties.
+End Definitions.
 
